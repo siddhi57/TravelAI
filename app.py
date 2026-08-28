@@ -1,13 +1,14 @@
 import os
 import math
+from functools import wraps
 from datetime import datetime, timedelta
-from flask import Flask, render_template, redirect, url_for, flash, request, jsonify
+from flask import Flask, render_template, redirect, url_for, flash, request, jsonify, abort
 from flask_login import LoginManager, login_user, logout_user, login_required, current_user
 from werkzeug.utils import secure_filename
 
 from config import Config
 from models import db, User, Destination, HotelsCache, Post, Like, Comment
-from forms import RegistrationForm, LoginForm, ProfileForm, RecommendationForm, PostForm, CommentForm, ItineraryForm, sanitize_html
+from forms import RegistrationForm, LoginForm, ProfileForm, DestinationForm, RecommendationForm, PostForm, CommentForm, ItineraryForm, sanitize_html
 from ml.recommender import recommender_engine
 from api.weather import get_current_weather, get_weather_forecast
 from api.geoapify import geocode_location, get_nearby_hotels, get_nearby_attractions
@@ -29,6 +30,17 @@ login_manager.login_message_category = 'info'
 def load_user(user_id):
     return db.session.get(User, int(user_id))
 
+# Admin Required Decorator
+def admin_required(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        if not current_user.is_authenticated or not current_user.is_admin:
+            flash("Access denied. Admin privileges required.", "danger")
+            abort(403)
+        return f(*args, **kwargs)
+    return decorated_function
+
+
 # Initialize database schema
 def init_db():
     with app.app_context():
@@ -39,31 +51,44 @@ init_db()
 # CLI Command for Database Seeding (Prevents multi-worker Gunicorn race conditions)
 @app.cli.command("seed-db")
 def seed_db_command():
-    """Seeds the database with initial destinations dataset from CSV."""
+    """Seeds the database with initial destinations dataset from CSV and default Admin account."""
+    # 1. Seed Destinations Dataset
     csv_path = os.path.join(app.root_path, 'datasets', 'destinations.csv')
-    if not os.path.exists(csv_path):
-        print(f"Error: dataset CSV not found at {csv_path}")
-        return
-        
-    import pandas as pd
-    df = pd.read_csv(csv_path)
-    df.fillna('', inplace=True)
-    added_count = 0
-    for _, row in df.iterrows():
-        existing = Destination.query.filter_by(name=row['name']).first()
-        if not existing:
-            dest = Destination(
-                name=row['name'],
-                state=row['state'],
-                category=row['category'],
-                budget_level=row['budget_level'],
-                description=row['description'],
-                tags=row['tags']
-            )
-            db.session.add(dest)
-            added_count += 1
-    db.session.commit()
-    print(f"Database seeded successfully! Added {added_count} destinations.")
+    if os.path.exists(csv_path):
+        import pandas as pd
+        df = pd.read_csv(csv_path)
+        df.fillna('', inplace=True)
+        added_count = 0
+        for _, row in df.iterrows():
+            existing = Destination.query.filter_by(name=row['name']).first()
+            if not existing:
+                dest = Destination(
+                    name=row['name'],
+                    state=row['state'],
+                    category=row['category'],
+                    budget_level=row['budget_level'],
+                    description=row['description'],
+                    tags=row['tags']
+                )
+                db.session.add(dest)
+                added_count += 1
+        db.session.commit()
+        print(f"Destinations seeded: Added {added_count} destinations.")
+
+    # 2. Seed Default Admin User
+    admin_user = User.query.filter_by(email='admin@travelai.com').first()
+    if not admin_user:
+        admin_user = User(
+            name='System Admin',
+            email='admin@travelai.com',
+            is_admin=True
+        )
+        admin_user.set_password('AdminPass123!')
+        db.session.add(admin_user)
+        db.session.commit()
+        print("Default Superadmin Account Created: admin@travelai.com / AdminPass123!")
+    else:
+        print("Superadmin Account already exists.")
 
 
 # Helper for allowed upload file extensions
@@ -73,10 +98,6 @@ def allowed_file(filename):
 
 # Geodesic Distance Helper (Haversine Formula) for Itinerary Proximity Sorting
 def haversine_distance_km(lat1, lon1, lat2, lon2):
-    """
-    Calculates great-circle geodesic distance between two points on Earth in kilometers.
-    Accurate across all latitudes (replaces raw Euclidean approximation).
-    """
     R = 6371.0  # Earth's radius in kilometers
     dlat = math.radians(lat2 - lat1)
     dlon = math.radians(lon2 - lon1)
@@ -86,7 +107,7 @@ def haversine_distance_km(lat1, lon1, lat2, lon2):
     return R * c
 
 
-# --- ROUTES ---
+# --- PUBLIC & USER ROUTES ---
 
 @app.route('/')
 def index():
@@ -180,7 +201,6 @@ def recommendations():
                 top_n=5
             )
         except Exception as e:
-            # Log server-side securely without leaking stack details to user
             app.logger.error(f"Error computing recommendations: {str(e)}", exc_info=True)
             flash("Unable to process recommendations at this time. Displaying top popular destinations instead.", "warning")
             results = recommender_engine.recommend(top_n=5)
@@ -195,11 +215,9 @@ def hotels():
     destination_name = request.args.get('destination', 'Goa').strip()
     budget_filter = request.args.get('budget', 'Any').strip()
     
-    # Deterministic destination query matching exact name first, ordered by ID
     dest_obj = Destination.query.filter(Destination.name.ilike(destination_name)).order_by(Destination.id.asc()).first()
     dest_id = dest_obj.id if dest_obj else None
     
-    # Check cache table for recent hotels (within 24 hours)
     cached_hotels = []
     if dest_id:
         cached_query = HotelsCache.query.filter_by(destination_id=dest_id).filter(
@@ -213,9 +231,7 @@ def hotels():
             fetched = get_nearby_hotels(destination_name, budget_tier=budget_filter, limit=10)
             cached_hotels = fetched
             
-            # Save to database cache table if valid destination object exists
             if dest_id and fetched:
-                # Clear old cache for this destination
                 HotelsCache.query.filter_by(destination_id=dest_id).delete()
                 for h in fetched:
                     cache_item = HotelsCache(
@@ -235,13 +251,11 @@ def hotels():
             flash("Unable to fetch live hotel updates. Displaying available results.", "warning")
             cached_hotels = []
 
-    # Filter by budget if specified
     if budget_filter and budget_filter != 'Any':
         filtered = [h for h in cached_hotels if str(h.get('price_tier')).lower() == budget_filter.lower()]
         if filtered:
             cached_hotels = filtered
             
-    # Sort by rating descending
     cached_hotels.sort(key=lambda x: x.get('rating', 0), reverse=True)
     
     coords = geocode_location(destination_name)
@@ -297,14 +311,10 @@ def itinerary():
         num_days = form.days.data
         user_budget = form.budget.data
         
-        # Retrieve live & dataset attractions for destination
         raw_attractions = get_nearby_attractions(destination_name, limit=18)
         dest_coords = geocode_location(destination_name)
         c_lat, c_lng = dest_coords['lat'], dest_coords['lng']
         
-        # --- GEODESIC HAVERSINE DISTANCE SORTING ---
-        # Note: Full route optimization (TSP / Traveling Salesperson shortest path calculation) is planned for future enhancements.
-        # We sort attractions by Haversine geodesic distance from destination center.
         def calc_geo_distance(item):
             i_lat = item.get('lat', c_lat)
             i_lng = item.get('lng', c_lng)
@@ -316,10 +326,7 @@ def itinerary():
         if len(sorted_attractions) < needed_activities:
             is_data_thin = True
             
-        # Group 2-3 activities per day
         days_plan = []
-        activities_per_day = 3
-        
         time_slots = ["Morning (09:00 AM)", "Afternoon (01:30 PM)", "Evening (05:30 PM)"]
         
         attraction_idx = 0
@@ -331,7 +338,6 @@ def itinerary():
                     attraction_idx += 1
                     is_simulated = False
                 else:
-                    # Generic fallback activity when places run thin
                     att = {
                         'name': f"{destination_name} Local Explorer & Relaxation",
                         'category': 'Leisure',
@@ -388,12 +394,10 @@ def community():
         flash('Your post has been published to the community feed!', 'success')
         return redirect(url_for('community'))
 
-    # Pagination: 5 posts per page
     page = request.args.get('page', 1, type=int)
     pagination = Post.query.order_by(Post.created_at.desc()).paginate(page=page, per_page=5, error_out=False)
     posts = pagination.items
     
-    # Map markers from all posts with valid lat/lng
     map_posts = Post.query.filter(Post.lat.isnot(None), Post.lng.isnot(None)).order_by(Post.created_at.desc()).limit(20).all()
     posts_data = [p.to_dict(current_user_id=current_user.id if current_user.is_authenticated else None) for p in map_posts]
     
@@ -451,7 +455,184 @@ def add_comment(post_id):
     return redirect(url_for('community'))
 
 
+# --- ADMIN DASHBOARD & MANAGEMENT ROUTES ---
+
+@app.route('/admin')
+@admin_required
+def admin_dashboard():
+    total_users = User.query.count()
+    total_destinations = Destination.query.count()
+    total_posts = Post.query.count()
+    total_cached_hotels = HotelsCache.query.count()
+    
+    recent_users = User.query.order_by(User.joined_date.desc()).limit(5).all()
+    recent_posts = Post.query.order_by(Post.created_at.desc()).limit(5).all()
+
+    return render_template('admin/dashboard.html', 
+                           total_users=total_users, 
+                           total_destinations=total_destinations, 
+                           total_posts=total_posts, 
+                           total_cached_hotels=total_cached_hotels,
+                           recent_users=recent_users,
+                           recent_posts=recent_posts)
+
+
+@app.route('/admin/destinations', methods=['GET', 'POST'])
+@admin_required
+def admin_destinations():
+    form = DestinationForm()
+    if request.method == 'POST' and form.validate_on_submit():
+        dest_id = request.form.get('dest_id')
+        if dest_id:
+            # Edit existing destination
+            dest = db.get_or_404(Destination, int(dest_id))
+            dest.name = sanitize_html(form.name.data)
+            dest.state = sanitize_html(form.state.data)
+            dest.category = form.category.data
+            dest.budget_level = form.budget_level.data
+            dest.description = sanitize_html(form.description.data)
+            dest.tags = sanitize_html(form.tags.data)
+            flash(f"Destination '{dest.name}' updated successfully.", "success")
+        else:
+            # Add new destination
+            dest = Destination(
+                name=sanitize_html(form.name.data),
+                state=sanitize_html(form.state.data),
+                category=form.category.data,
+                budget_level=form.budget_level.data,
+                description=sanitize_html(form.description.data),
+                tags=sanitize_html(form.tags.data)
+            )
+            db.session.add(dest)
+            flash(f"Destination '{dest.name}' created successfully.", "success")
+            
+        db.session.commit()
+        # Refit ML vectorizer on modified database table
+        try:
+            recommender_engine._load_and_prepare()
+        except Exception:
+            pass
+        return redirect(url_for('admin_destinations'))
+
+    page = request.args.get('page', 1, type=int)
+    search_q = request.args.get('q', '').strip()
+    
+    query = Destination.query
+    if search_q:
+        query = query.filter(Destination.name.ilike(f"%{search_q}%") | Destination.state.ilike(f"%{search_q}%"))
+        
+    pagination = query.order_by(Destination.id.desc()).paginate(page=page, per_page=10, error_out=False)
+    destinations = pagination.items
+
+    return render_template('admin/destinations.html', form=form, destinations=destinations, pagination=pagination, search_q=search_q)
+
+
+@app.route('/admin/destinations/delete/<int:dest_id>', methods=['POST'])
+@admin_required
+def admin_delete_destination(dest_id):
+    dest = db.get_or_404(Destination, dest_id)
+    dest_name = dest.name
+    db.session.delete(dest)
+    db.session.commit()
+    # Refit ML vectorizer after deletion
+    try:
+        recommender_engine._load_and_prepare()
+    except Exception:
+        pass
+    flash(f"Destination '{dest_name}' deleted.", "info")
+    return redirect(url_for('admin_destinations'))
+
+
+@app.route('/admin/users')
+@admin_required
+def admin_users():
+    page = request.args.get('page', 1, type=int)
+    search_q = request.args.get('q', '').strip()
+    
+    query = User.query
+    if search_q:
+        query = query.filter(User.name.ilike(f"%{search_q}%") | User.email.ilike(f"%{search_q}%"))
+        
+    pagination = query.order_by(User.joined_date.desc()).paginate(page=page, per_page=10, error_out=False)
+    users = pagination.items
+
+    return render_template('admin/users.html', users=users, pagination=pagination, search_q=search_q)
+
+
+@app.route('/admin/users/toggle_admin/<int:user_id>', methods=['POST'])
+@admin_required
+def admin_toggle_user_role(user_id):
+    user = db.get_or_404(User, user_id)
+    if user.id == current_user.id:
+        flash("You cannot revoke your own administrator privileges.", "warning")
+        return redirect(url_for('admin_users'))
+        
+    user.is_admin = not user.is_admin
+    db.session.commit()
+    status_str = "granted" if user.is_admin else "revoked"
+    flash(f"Admin privileges {status_str} for user '{user.email}'.", "success")
+    return redirect(url_for('admin_users'))
+
+
+@app.route('/admin/users/delete/<int:user_id>', methods=['POST'])
+@admin_required
+def admin_delete_user(user_id):
+    user = db.get_or_404(User, user_id)
+    if user.id == current_user.id:
+        flash("You cannot delete your own admin account.", "danger")
+        return redirect(url_for('admin_users'))
+        
+    user_email = user.email
+    db.session.delete(user)
+    db.session.commit()
+    flash(f"User account '{user_email}' deleted successfully.", "info")
+    return redirect(url_for('admin_users'))
+
+
+@app.route('/admin/posts')
+@admin_required
+def admin_posts():
+    page = request.args.get('page', 1, type=int)
+    pagination = Post.query.order_by(Post.created_at.desc()).paginate(page=page, per_page=10, error_out=False)
+    posts = pagination.items
+
+    return render_template('admin/posts.html', posts=posts, pagination=pagination)
+
+
+@app.route('/admin/posts/delete/<int:post_id>', methods=['POST'])
+@admin_required
+def admin_delete_post(post_id):
+    post = db.get_or_404(Post, post_id)
+    db.session.delete(post)
+    db.session.commit()
+    flash("Post removed by administrator.", "info")
+    return redirect(url_for('admin_posts'))
+
+
+@app.route('/admin/comments/delete/<int:comment_id>', methods=['POST'])
+@admin_required
+def admin_delete_comment(comment_id):
+    comment = db.get_or_404(Comment, comment_id)
+    db.session.delete(comment)
+    db.session.commit()
+    flash("Comment deleted.", "info")
+    return redirect(url_for('admin_posts'))
+
+
+@app.route('/admin/cache/clear', methods=['POST'])
+@admin_required
+def admin_clear_cache():
+    count = HotelsCache.query.delete()
+    db.session.commit()
+    flash(f"Hotel cache cleared. Removed {count} cached entries.", "success")
+    return redirect(url_for('admin_dashboard'))
+
+
 # Error handlers
+@app.errorhandler(403)
+def forbidden_error(error):
+    return render_template('404.html'), 403
+
 @app.errorhandler(404)
 def not_found_error(error):
     return render_template('404.html'), 404
@@ -463,5 +644,4 @@ def internal_error(error):
 
 
 if __name__ == '__main__':
-    # Flask debug mode is gated behind FLASK_DEBUG environment variable
     app.run(debug=app.config['DEBUG'], host='127.0.0.1', port=5000)

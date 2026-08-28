@@ -13,6 +13,7 @@ class User(UserMixin, db.Model):
     email = db.Column(db.String(120), unique=True, nullable=False, index=True)
     password_hash = db.Column(db.String(256), nullable=False)
     profile_photo = db.Column(db.String(255), default='default_avatar.png')
+    is_admin = db.Column(db.Boolean, default=False, nullable=False)
     joined_date = db.Column(db.DateTime, default=datetime.utcnow)
 
     # Relationships
@@ -27,7 +28,7 @@ class User(UserMixin, db.Model):
         return check_password_hash(self.password_hash, password)
 
     def __repr__(self):
-        return f'<User {self.email}>'
+        return f'<User {self.email} (Admin={self.is_admin})>'
 
 
 class Destination(db.Model):
@@ -60,7 +61,6 @@ class HotelsCache(db.Model):
     __tablename__ = 'hotels_cache'
     
     id = db.Column(db.Integer, primary_key=True)
-    # destination_id is non-nullable to prevent orphaned hotel cache entries
     destination_id = db.Column(db.Integer, db.ForeignKey('destinations.id', ondelete='CASCADE'), nullable=False)
     hotel_name = db.Column(db.String(150), nullable=False)
     address = db.Column(db.String(255), nullable=True)
@@ -89,7 +89,6 @@ class Post(db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
-    # DB-level length constraint of 1000 characters on caption
     caption = db.Column(db.String(1000), nullable=False)
     image_path = db.Column(db.String(255), nullable=True)
     location_name = db.Column(db.String(150), nullable=True)
@@ -137,7 +136,6 @@ class Comment(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
     post_id = db.Column(db.Integer, db.ForeignKey('posts.id', ondelete='CASCADE'), nullable=False)
-    # DB-level length constraint of 500 characters on comment_text
     comment_text = db.Column(db.String(500), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 

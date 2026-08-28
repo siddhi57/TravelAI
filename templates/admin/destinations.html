@@ -1,0 +1,165 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Destinations — Admin Panel{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h2 class="fw-bold mb-1"><i class="bi bi-geo-alt-fill text-info me-2"></i>Destination Dataset Curation</h2>
+            <p class="text-muted mb-0">Add, update, or remove real destinations (TF-IDF recommender auto-refits on changes)</p>
+        </div>
+        <button class="btn btn-info text-white fw-bold" data-bs-toggle="modal" data-bs-target="#addDestModal">
+            <i class="bi bi-plus-lg me-1"></i>Add Destination
+        </button>
+    </div>
+
+    <!-- Search & Filter Bar -->
+    <div class="card shadow-sm mb-4 p-3">
+        <form method="GET" action="{{ url_for('admin_destinations') }}" class="d-flex gap-2">
+            <input type="text" name="q" class="form-control" value="{{ search_q }}" placeholder="Search by destination name or state...">
+            <button type="submit" class="btn btn-secondary px-4">Filter</button>
+            {% if search_q %}
+                <a href="{{ url_for('admin_destinations') }}" class="btn btn-outline-secondary">Reset</a>
+            {% endif %}
+        </form>
+    </div>
+
+    <!-- Table -->
+    <div class="card shadow-sm p-3">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th>ID</th>
+                        <th>Name</th>
+                        <th>State / Region</th>
+                        <th>Category</th>
+                        <th>Budget</th>
+                        <th>Description Snippet</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for d in destinations %}
+                    <tr>
+                        <td><small class="text-muted">#{{ d.id }}</small></td>
+                        <td><strong class="text-dark">{{ d.name }}</strong></td>
+                        <td><span class="small text-muted">{{ d.state }}</span></td>
+                        <td><span class="badge-category">{{ d.category }}</span></td>
+                        <td><span class="badge-budget">{{ d.budget_level }}</span></td>
+                        <td><small class="text-secondary">{{ d.description[:60] }}...</small></td>
+                        <td>
+                            <button class="btn btn-sm btn-outline-primary me-1" 
+                                    onclick='populateEditModal({{ d.id }}, {{ d.name|tojson }}, {{ d.state|tojson }}, {{ d.category|tojson }}, {{ d.budget_level|tojson }}, {{ d.description|tojson }}, {{ d.tags|tojson }})'
+                                    data-bs-toggle="modal" data-bs-target="#addDestModal">
+                                Edit
+                            </button>
+                            <form method="POST" action="{{ url_for('admin_delete_destination', dest_id=d.id) }}" class="d-inline" onsubmit="return confirm('Are you sure you want to delete {{ d.name }}?');">
+                                <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>
+                            </form>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Pagination -->
+        {% if pagination and pagination.pages > 1 %}
+            <div class="pt-3 border-top mt-3">
+                <nav>
+                    <ul class="pagination justify-content-center mb-0">
+                        <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+                            <a class="page-link" href="{{ url_for('admin_destinations', page=pagination.prev_num, q=search_q) }}">Previous</a>
+                        </li>
+                        {% for p in pagination.iter_pages() %}
+                            {% if p %}
+                                <li class="page-item {% if p == pagination.page %}active{% endif %}">
+                                    <a class="page-link" href="{{ url_for('admin_destinations', page=p, q=search_q) }}">{{ p }}</a>
+                                </li>
+                            {% endif %}
+                        {% endfor %}
+                        <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+                            <a class="page-link" href="{{ url_for('admin_destinations', page=pagination.next_num, q=search_q) }}">Next</a>
+                        </li>
+                    </ul>
+                </nav>
+            </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Add / Edit Destination Modal -->
+<div class="modal fade" id="addDestModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title fw-bold" id="modalTitle">Add New Destination</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="{{ url_for('admin_destinations') }}">
+                {{ form.hidden_tag() }}
+                <input type="hidden" name="dest_id" id="dest_id_input">
+
+                <div class="modal-body">
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            {{ form.name.label(class="form-label fw-semibold") }}
+                            {{ form.name(class="form-control", id="dest_name") }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.state.label(class="form-label fw-semibold") }}
+                            {{ form.state(class="form-control", id="dest_state") }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.category.label(class="form-label fw-semibold") }}
+                            {{ form.category(class="form-select", id="dest_category") }}
+                        </div>
+                        <div class="col-md-6">
+                            {{ form.budget_level.label(class="form-label fw-semibold") }}
+                            {{ form.budget_level(class="form-select", id="dest_budget") }}
+                        </div>
+                        <div class="col-12">
+                            {{ form.description.label(class="form-label fw-semibold") }}
+                            {{ form.description(class="form-control", rows="3", id="dest_description") }}
+                        </div>
+                        <div class="col-12">
+                            {{ form.tags.label(class="form-label fw-semibold") }}
+                            {{ form.tags(class="form-control", placeholder="beach nightlife party water sports", id="dest_tags") }}
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    {{ form.submit(class="btn btn-info text-white fw-bold") }}
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    function populateEditModal(id, name, state, category, budget, description, tags) {
+        document.getElementById('modalTitle').textContent = "Edit Destination: " + name;
+        document.getElementById('dest_id_input').value = id;
+        document.getElementById('dest_name').value = name;
+        document.getElementById('dest_state').value = state;
+        document.getElementById('dest_category').value = category;
+        document.getElementById('dest_budget').value = budget;
+        document.getElementById('dest_description').value = description;
+        document.getElementById('dest_tags').value = tags || '';
+    }
+
+    document.getElementById('addDestModal').addEventListener('hidden.bs.modal', function () {
+        document.getElementById('modalTitle').textContent = "Add New Destination";
+        document.getElementById('dest_id_input').value = "";
+        document.getElementById('dest_name').value = "";
+        document.getElementById('dest_state').value = "";
+        document.getElementById('dest_description').value = "";
+        document.getElementById('dest_tags').value = "";
+    });
+</script>
+{% endblock %}

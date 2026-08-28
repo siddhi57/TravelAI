@@ -81,6 +81,10 @@
                                 <span>{{ current_user.name }}</span>
                             </button>
                             <ul class="dropdown-menu dropdown-menu-end shadow">
+                                {% if current_user.is_admin %}
+                                    <li><a class="dropdown-item fw-bold text-primary" href="{{ url_for('admin_dashboard') }}"><i class="bi bi-shield-lock me-2"></i>Admin Panel</a></li>
+                                    <li><hr class="dropdown-divider"></li>
+                                {% endif %}
                                 <li><a class="dropdown-item" href="{{ url_for('profile') }}"><i class="bi bi-person me-2"></i>My Profile</a></li>
                                 <li><hr class="dropdown-divider"></li>
                                 <li><a class="dropdown-item text-danger" href="{{ url_for('logout') }}"><i class="bi bi-box-arrow-right me-2"></i>Logout</a></li>

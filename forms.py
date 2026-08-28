@@ -24,7 +24,6 @@ class UniqueEmailValidator:
         if not email_clean:
             return
             
-        # Ignore current logged-in user's own email on profile update
         if current_user and current_user.is_authenticated and current_user.email.lower() == email_clean:
             return
 
@@ -64,6 +63,31 @@ class ProfileForm(FlaskForm):
     email = StringField('Email Address', validators=[DataRequired(), Email(), Length(max=120), UniqueEmailValidator()])
     profile_photo = FileField('Update Profile Photo', validators=[FileAllowed(['jpg', 'jpeg', 'png', 'webp', 'gif'], 'Images only!')])
     submit = SubmitField('Save Profile')
+
+
+class DestinationForm(FlaskForm):
+    name = StringField('Destination Name', validators=[DataRequired(), Length(min=2, max=120)])
+    state = StringField('State / Region / Country', validators=[DataRequired(), Length(min=2, max=100)])
+    category = SelectField('Category', choices=[
+        ('Beach', 'Beach & Coastal'),
+        ('Mountain', 'Mountain & Snow'),
+        ('Heritage', 'Heritage & Architecture'),
+        ('Nature', 'Nature & Eco-Tourism'),
+        ('City', 'City & Shopping'),
+        ('Adventure', 'Adventure & Sports'),
+        ('Culture', 'Culture & Spiritual'),
+        ('Island', 'Tropical Island'),
+        ('Desert', 'Desert Safari'),
+        ('Wildlife', 'Wildlife & Jungle')
+    ], validators=[DataRequired()])
+    budget_level = SelectField('Budget Level', choices=[
+        ('Budget', 'Budget ($)'),
+        ('Moderate', 'Moderate ($$)'),
+        ('Luxury', 'Luxury ($$$)')
+    ], validators=[DataRequired()])
+    description = TextAreaField('Description', validators=[DataRequired(), Length(min=10, max=1000)])
+    tags = StringField('Tags (space-separated)', validators=[Length(max=255)])
+    submit = SubmitField('Save Destination')
 
 
 class RecommendationForm(FlaskForm):
