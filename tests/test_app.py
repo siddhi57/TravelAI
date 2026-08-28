@@ -1,10 +1,15 @@
 import os
 import sys
-import pytest
+
+# Ensure test environment variables are set BEFORE importing app
+os.environ['TESTING'] = 'True'
+os.environ['DATABASE_URI'] = 'sqlite:///:memory:'
+os.environ['SECRET_KEY'] = 'test_secret_key_testing_mode_only'
 
 # Add parent directory to sys.path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
+import pytest
 from app import app, db, haversine_distance_km
 from models import User, Destination, Post, Like, Comment, HotelsCache
 from ml.recommender import DestinationRecommender, recommender_engine
@@ -13,7 +18,6 @@ from api.geoapify import geocode_location, get_nearby_hotels, get_nearby_attract
 
 @pytest.fixture
 def client():
-    os.environ['TESTING'] = 'True'
     app.config['TESTING'] = True
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
     app.config['WTF_CSRF_ENABLED'] = False
