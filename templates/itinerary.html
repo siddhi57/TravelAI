@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+
+{% block title %}AI Itinerary Generator — TravelAI Companion{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row align-items-center mb-4">
+        <div class="col-md-8">
+            <h2 class="fw-bold mb-1"><i class="bi bi-calendar-range text-primary me-2"></i>AI Day-by-Day Itinerary Generator</h2>
+            <p class="text-muted">Generates structured daily activity plans sorted by spatial proximity</p>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Generator Input Form -->
+        <div class="col-lg-4">
+            <div class="card shadow-sm p-4 sticky-lg-top" style="top: 80px; z-index: 10;">
+                <div class="card-body p-0">
+                    <h5 class="fw-bold mb-3"><i class="bi bi-sliders me-2"></i>Trip Parameters</h5>
+                    
+                    <form method="POST" action="{{ url_for('itinerary') }}">
+                        {{ form.hidden_tag() }}
+
+                        <div class="mb-3">
+                            {{ form.destination.label(class="form-label fw-semibold") }}
+                            {{ form.destination(class="form-control", placeholder="e.g. Manali, Paris, Kyoto") }}
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.days.label(class="form-label fw-semibold") }}
+                            {{ form.days(class="form-control", type="number", min="1", max="7") }}
+                        </div>
+
+                        <div class="mb-4">
+                            {{ form.budget.label(class="form-label fw-semibold") }}
+                            {{ form.budget(class="form-select") }}
+                        </div>
+
+                        <div class="d-grid">
+                            {{ form.submit(class="btn btn-primary fw-bold py-2") }}
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Generated Itinerary Schedule -->
+        <div class="col-lg-8">
+            {% if days_plan %}
+                <div class="card shadow-sm p-4 mb-4 bg-primary bg-opacity-10 border-primary">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <h4 class="fw-bold mb-1 text-primary">{{ days_plan|length }}-Day Smart Plan for {{ destination }}</h4>
+                            <p class="small text-muted mb-0"><i class="bi bi-info-circle me-1"></i>Activities organized via spatial proximity sort (lat/lng coordinates).</p>
+                        </div>
+                        <a href="{{ url_for('hotels', destination=destination) }}" class="btn btn-sm btn-success">
+                            <i class="bi bi-building me-1"></i>Book Hotels
+                        </a>
+                    </div>
+                </div>
+
+                <div class="mt-4">
+                    {% for day in days_plan %}
+                        <div class="timeline-day">
+                            <h4 class="fw-bold text-dark mb-3">Day {{ day.day_number }} Schedule</h4>
+                            
+                            <div class="row g-3">
+                                {% for act in day.activities %}
+                                    <div class="col-12">
+                                        <div class="card shadow-sm p-3 border-start border-3 border-primary">
+                                            <div class="card-body p-2">
+                                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                                    <span class="badge bg-primary text-white fw-semibold">{{ act.slot }}</span>
+                                                    {% if act.category %}
+                                                        <span class="badge-category">{{ act.category }}</span>
+                                                    {% endif %}
+                                                </div>
+                                                <h5 class="fw-bold mb-1 text-dark">{{ act.title }}</h5>
+                                                <p class="text-muted small mb-0"><i class="bi bi-geo-alt me-1"></i>{{ act.address }}</p>
+                                            </div>
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="card shadow-sm p-5 text-center">
+                    <div class="card-body">
+                        <i class="bi bi-map-fill text-primary opacity-50 fs-1 d-block mb-3"></i>
+                        <h4 class="fw-bold">Ready to Build Your Travel Schedule?</h4>
+                        <p class="text-muted">Enter a destination and select number of days (1-7) to generate a personalized day-by-day itinerary.</p>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

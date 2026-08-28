@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+
+{% block title %}Hotels in {{ destination }} — TravelAI Companion{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header & Search Bar -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body p-4">
+            <div class="row align-items-center gy-3">
+                <div class="col-md-6">
+                    <h3 class="fw-bold mb-1"><i class="bi bi-building text-success me-2"></i>Hotels in {{ destination }}</h3>
+                    <p class="text-muted small mb-0">Powered by Geoapify Places API & SQLite Cache</p>
+                </div>
+                <div class="col-md-6">
+                    <form method="GET" action="{{ url_for('hotels') }}" class="d-flex gap-2">
+                        <input type="text" name="destination" class="form-control" value="{{ destination }}" placeholder="Enter destination..." required>
+                        <select name="budget" class="form-select" style="max-width: 140px;">
+                            <option value="Any" {% if budget_filter == 'Any' %}selected{% endif %}>All Budgets</option>
+                            <option value="Budget" {% if budget_filter == 'Budget' %}selected{% endif %}>Budget ($)</option>
+                            <option value="Moderate" {% if budget_filter == 'Moderate' %}selected{% endif %}>Moderate ($$)</option>
+                            <option value="Luxury" {% if budget_filter == 'Luxury' %}selected{% endif %}>Luxury ($$$)</option>
+                        </select>
+                        <button type="submit" class="btn btn-success px-4 fw-bold">Search</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Map & Hotel Listings -->
+    <div class="row g-4">
+        <!-- Interactive Map -->
+        <div class="col-lg-6">
+            <div class="card shadow-sm p-3 h-100">
+                <div class="card-body p-0 d-flex flex-column">
+                    <div class="d-flex justify-content-between align-items-center mb-2 px-2 pt-2">
+                        <h5 class="fw-bold mb-0"><i class="bi bi-map me-2"></i>Map View</h5>
+                        <span class="badge bg-secondary bg-opacity-10 text-dark">OpenStreetMap</span>
+                    </div>
+                    <div id="hotelMap" class="map-container flex-grow-1"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Hotel Cards List -->
+        <div class="col-lg-6">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold mb-0">Accommodations Found ({{ hotels|length }})</h5>
+                <span class="badge bg-success bg-opacity-10 text-success">Sorted by Rating</span>
+            </div>
+
+            {% if hotels %}
+                <div class="d-flex flex-column gap-3 overflow-auto" style="max-height: 500px; padding-right: 5px;">
+                    {% for h in hotels %}
+                        <div class="card shadow-sm p-3">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-start mb-1">
+                                    <h5 class="fw-bold mb-0 text-dark">{{ h.hotel_name }}</h5>
+                                    {% if h.rating %}
+                                        <span class="badge bg-warning text-dark fw-bold fs-6">
+                                            <i class="bi bi-star-fill me-1"></i>{{ h.rating }}
+                                        </span>
+                                    {% endif %}
+                                </div>
+
+                                <p class="text-muted small mb-2"><i class="bi bi-geo-alt me-1"></i>{{ h.address }}</p>
+
+                                <div class="d-flex justify-content-between align-items-center pt-2 border-top">
+                                    <span class="badge-budget">{{ h.price_tier if h.price_tier else 'Moderate' }}</span>
+                                    <button class="btn btn-sm btn-outline-success" onclick="focusHotelMarker({{ h.lat }}, {{ h.lng }}, '{{ h.hotel_name }}')">
+                                        <i class="bi bi-geo-fill me-1"></i>View on Map
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="alert alert-warning p-4 text-center">
+                    <i class="bi bi-building-exclamation fs-1 d-block mb-2"></i>
+                    <h5>No hotels found matching criteria.</h5>
+                    <p class="mb-0">Try searching for a broader destination or changing budget filter.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const centerLat = {{ coords.lat if coords and coords.lat else 20.5937 }};
+        const centerLng = {{ coords.lng if coords and coords.lng else 78.9629 }};
+        
+        const hotelMarkers = [
+            {% for h in hotels %}
+            {
+                lat: {{ h.lat if h.lat else coords.lat }},
+                lng: {{ h.lng if h.lng else coords.lng }},
+                title: "{{ h.hotel_name|replace('"', '\\"') }}",
+                description: "Rating: {{ h.rating if h.rating else '4.5' }} | {{ h.address|replace('"', '\\"') }}",
+                category: "Hotel"
+            }{% if not loop.last %},{% endif %}
+            {% endfor %}
+        ];
+
+        window.leafletHotelMap = initLeafletMap('hotelMap', centerLat, centerLng, 13, hotelMarkers);
+    });
+
+    function focusHotelMarker(lat, lng, name) {
+        if (window.leafletHotelMap) {
+            window.leafletHotelMap.setView([lat, lng], 15);
+        }
+    }
+</script>
+{% endblock %}

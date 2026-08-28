@@ -1,0 +1,145 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard — TravelAI Companion{% endblock %}
+
+{% block content %}
+<div class="container">
+    <!-- Hero Banner -->
+    <div class="hero-section text-center position-relative overflow-hidden mb-5">
+        <div class="position-relative z-1 py-3">
+            <span class="badge bg-info text-dark px-3 py-2 rounded-pill fw-bold text-uppercase mb-3">AI-Powered Travel Intelligence</span>
+            <h1 class="hero-title mb-3">Discover Your Next Journey with Precision AI</h1>
+            <p class="lead text-light max-w-700 mx-auto mb-4 opacity-90">
+                Personalized destination recommendations, real-time weather forecasts, nearby hotel discovery, and smart day-by-day itineraries.
+            </p>
+            <div class="d-flex justify-content-center gap-3 flex-wrap">
+                <a href="{{ url_for('recommendations') }}" class="btn btn-info btn-lg px-4 py-3 text-white fw-bold shadow">
+                    <i class="bi bi-magic me-2"></i>Find Destinations for Me
+                </a>
+                <a href="{{ url_for('itinerary') }}" class="btn btn-outline-light btn-lg px-4 py-3">
+                    <i class="bi bi-calendar-range me-2"></i>Generate AI Itinerary
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Core Feature Cards Grid -->
+    <div class="row g-4 mb-5">
+        <div class="col-md-4">
+            <div class="card card-hover h-100 p-3">
+                <div class="card-body">
+                    <div class="d-inline-flex align-items-center justify-content-center bg-primary bg-opacity-10 text-primary p-3 rounded-3 mb-3">
+                        <i class="bi bi-cpu fs-2"></i>
+                    </div>
+                    <h5 class="card-title fw-bold">TF-IDF Recommendation</h5>
+                    <p class="card-text text-muted">Machine learning engine utilizing scikit-learn TF-IDF vectorization and cosine similarity to match your budget, state, and travel interests.</p>
+                    <a href="{{ url_for('recommendations') }}" class="btn btn-sm btn-outline-primary">Try Recommender &rarr;</a>
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-4">
+            <div class="card card-hover h-100 p-3">
+                <div class="card-body">
+                    <div class="d-inline-flex align-items-center justify-content-center bg-success bg-opacity-10 text-success p-3 rounded-3 mb-3">
+                        <i class="bi bi-building fs-2"></i>
+                    </div>
+                    <h5 class="card-title fw-bold">Hotels & Places</h5>
+                    <p class="card-text text-muted">Integrates Geoapify Places API with smart SQLite caching table to retrieve nearby hotel accommodations and pricing tiers.</p>
+                    <a href="{{ url_for('hotels') }}" class="btn btn-sm btn-outline-success">Search Hotels &rarr;</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card card-hover h-100 p-3">
+                <div class="card-body">
+                    <div class="d-inline-flex align-items-center justify-content-center bg-warning bg-opacity-10 text-warning p-3 rounded-3 mb-3">
+                        <i class="bi bi-cloud-sun fs-2"></i>
+                    </div>
+                    <h5 class="card-title fw-bold">Live Weather Forecast</h5>
+                    <p class="card-text text-muted">Real-time OpenWeatherMap current metrics (temp, humidity, wind) and 5-day forecasts with icon representations.</p>
+                    <a href="{{ url_for('weather') }}" class="btn btn-sm btn-outline-warning">Check Weather &rarr;</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card card-hover h-100 p-3">
+                <div class="card-body">
+                    <div class="d-inline-flex align-items-center justify-content-center bg-info bg-opacity-10 text-info p-3 rounded-3 mb-3">
+                        <i class="bi bi-map fs-2"></i>
+                    </div>
+                    <h5 class="card-title fw-bold">OpenStreetMap Attractions</h5>
+                    <p class="card-text text-muted">Interactive Leaflet.js map with custom pin markers for nearby tourist attractions, sights, and historical landmarks.</p>
+                    <a href="{{ url_for('attractions_map') }}" class="btn btn-sm btn-outline-info">Explore Map &rarr;</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card card-hover h-100 p-3">
+                <div class="card-body">
+                    <div class="d-inline-flex align-items-center justify-content-center bg-secondary bg-opacity-10 text-dark p-3 rounded-3 mb-3">
+                        <i class="bi bi-journal-text fs-2"></i>
+                    </div>
+                    <h5 class="card-title fw-bold">Day-by-Day Itineraries</h5>
+                    <p class="card-text text-muted">Generates multi-day plans (2-3 activities per day) organized with spatial proximity sorting using Geoapify coordinates.</p>
+                    <a href="{{ url_for('itinerary') }}" class="btn btn-sm btn-outline-secondary">Build Itinerary &rarr;</a>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-4">
+            <div class="card card-hover h-100 p-3">
+                <div class="card-body">
+                    <div class="d-inline-flex align-items-center justify-content-center bg-danger bg-opacity-10 text-danger p-3 rounded-3 mb-3">
+                        <i class="bi bi-chat-heart fs-2"></i>
+                    </div>
+                    <h5 class="card-title fw-bold">Community Social Feed</h5>
+                    <p class="card-text text-muted">Share travel moments with photo uploads, Geoapify geocoded location tags, AJAX likes, and discussion comments.</p>
+                    <a href="{{ url_for('community') }}" class="btn btn-sm btn-outline-danger">Join Feed &rarr;</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Featured Destinations Section -->
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <div>
+            <h3 class="fw-bold mb-1">Featured Real Destinations</h3>
+            <p class="text-muted mb-0">Popular picks curated from our dataset</p>
+        </div>
+        <a href="{{ url_for('recommendations') }}" class="btn btn-link text-decoration-none">View All Recommendations &rarr;</a>
+    </div>
+
+    <div class="row g-4 mb-5">
+        {% for dest in destinations %}
+        <div class="col-md-4">
+            <div class="card h-100 shadow-sm border-0">
+                <div class="card-body d-flex flex-column">
+                    <div class="d-flex justify-content-between align-items-start mb-2">
+                        <span class="badge-category">{{ dest.category }}</span>
+                        <span class="badge-budget">{{ dest.budget_level }}</span>
+                    </div>
+                    <h4 class="card-title fw-bold mb-1">{{ dest.name }}</h4>
+                    <p class="text-muted small mb-2"><i class="bi bi-geo-alt me-1"></i>{{ dest.state }}</p>
+                    <p class="card-text flex-grow-1 text-secondary small">{{ dest.description[:120] }}...</p>
+                    <div class="d-flex gap-2 mt-3 pt-2 border-top">
+                        <a href="{{ url_for('weather', destination=dest.name) }}" class="btn btn-sm btn-light flex-fill" title="Weather">
+                            <i class="bi bi-cloud-sun text-warning"></i> Weather
+                        </a>
+                        <a href="{{ url_for('hotels', destination=dest.name) }}" class="btn btn-sm btn-light flex-fill" title="Hotels">
+                            <i class="bi bi-building text-success"></i> Hotels
+                        </a>
+                        <a href="{{ url_for('attractions_map', destination=dest.name) }}" class="btn btn-sm btn-light flex-fill" title="Map">
+                            <i class="bi bi-map text-info"></i> Map
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}

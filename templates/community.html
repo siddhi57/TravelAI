@@ -1,0 +1,190 @@
+{% extends "base.html" %}
+
+{% block title %}Community Feed — TravelAI Companion{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row align-items-center mb-4">
+        <div class="col-md-8">
+            <h2 class="fw-bold mb-1"><i class="bi bi-people text-danger me-2"></i>Traveler Community Feed</h2>
+            <p class="text-muted">Share travel stories, location tags, photos, likes, and discussion comments.</p>
+        </div>
+    </div>
+
+    <!-- Map Overview of Community Posts -->
+    <div class="card shadow-sm p-3 mb-5">
+        <div class="card-body p-0">
+            <div class="d-flex justify-content-between align-items-center mb-2 px-2 pt-2">
+                <h5 class="fw-bold mb-0"><i class="bi bi-pin-map me-2"></i>Global Post Locations Map</h5>
+                <span class="badge bg-danger text-white">Interactive Leaflet OSM Pins</span>
+            </div>
+            <div id="communityMap" class="map-container" style="height: 350px;"></div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Create New Post Sidebar Form -->
+        <div class="col-lg-4">
+            <div class="card shadow-sm p-4 sticky-lg-top" style="top: 80px; z-index: 10;">
+                <div class="card-body p-0">
+                    <h5 class="fw-bold mb-3"><i class="bi bi-pencil-square me-2"></i>Share Your Journey</h5>
+
+                    {% if current_user.is_authenticated %}
+                        <form method="POST" action="{{ url_for('community') }}" enctype="multipart/form-data">
+                            {{ form.hidden_tag() }}
+
+                            <div class="mb-3">
+                                {{ form.location_name.label(class="form-label fw-semibold") }}
+                                {{ form.location_name(class="form-control", placeholder="e.g. Goa, Paris, Taj Mahal") }}
+                                <div class="form-text">Geocoded via Geoapify API for map pins.</div>
+                            </div>
+
+                            <div class="mb-3">
+                                {{ form.caption.label(class="form-label fw-semibold") }}
+                                {{ form.caption(class="form-control", rows="3", placeholder="What was special about this location?") }}
+                            </div>
+
+                            <div class="mb-4">
+                                {{ form.image.label(class="form-label fw-semibold") }}
+                                {{ form.image(class="form-control") }}
+                            </div>
+
+                            <div class="d-grid">
+                                {{ form.submit(class="btn btn-danger text-white fw-bold py-2") }}
+                            </div>
+                        </form>
+                    {% else %}
+                        <div class="alert alert-info p-4 text-center">
+                            <i class="bi bi-lock fs-2 d-block mb-2"></i>
+                            <p class="mb-2">Log in to create posts and comment on community stories.</p>
+                            <a href="{{ url_for('login') }}" class="btn btn-sm btn-info text-white">Log In Now</a>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Feed List -->
+        <div class="col-lg-8">
+            <h4 class="fw-bold mb-3">Recent Community Posts</h4>
+
+            {% if posts %}
+                <div class="d-flex flex-column gap-4">
+                    {% for p in posts %}
+                        <div class="card shadow-sm p-3">
+                            <div class="card-body p-2">
+                                <!-- Author Header -->
+                                <div class="d-flex align-items-center justify-content-between mb-3">
+                                    <div class="d-flex align-items-center gap-2">
+                                        {% if p.author and p.author.profile_photo and p.author.profile_photo != 'default_avatar.png' %}
+                                            <img src="{{ url_for('static', filename='uploads/' + p.author.profile_photo) }}" class="nav-avatar" alt="Author">
+                                        {% else %}
+                                            <i class="bi bi-person-circle fs-3 text-secondary"></i>
+                                        {% endif %}
+                                        <div>
+                                            <h6 class="fw-bold mb-0 text-dark">{{ p.author.name if p.author else 'Traveler' }}</h6>
+                                            <span class="small text-muted">{{ p.created_at.strftime('%b %d, %Y at %H:%M') }}</span>
+                                        </div>
+                                    </div>
+                                    {% if p.location_name %}
+                                        <span class="badge bg-danger bg-opacity-10 text-danger fw-semibold">
+                                            <i class="bi bi-geo-alt me-1"></i>{{ p.location_name }}
+                                        </span>
+                                    {% endif %}
+                                </div>
+
+                                <!-- Caption Text -->
+                                <p class="card-text text-dark fs-6 mb-3">{{ p.caption }}</p>
+
+                                <!-- Optional Image -->
+                                {% if p.image_path %}
+                                    <div class="mb-3">
+                                        <img src="{{ url_for('static', filename='uploads/' + p.image_path) }}" class="post-img shadow-sm" alt="Post photo">
+                                    </div>
+                                {% endif %}
+
+                                <!-- Likes & Actions Bar -->
+                                <div class="d-flex align-items-center justify-content-between pt-2 border-top">
+                                    {% if current_user.is_authenticated %}
+                                        {% set user_liked = p.likes|selectattr('user_id', 'equalto', current_user.id)|list|length > 0 %}
+                                        <button class="btn btn-sm btn-outline-danger btn-like" data-post-id="{{ p.id }}">
+                                            <i class="bi {% if user_liked %}bi-heart-fill text-danger{% else %}bi-heart{% endif %} me-1"></i>
+                                            Like (<span class="like-count">{{ p.likes|length }}</span>)
+                                        </button>
+                                    {% else %}
+                                        <span class="text-muted small"><i class="bi bi-heart me-1"></i>{{ p.likes|length }} Likes</span>
+                                    {% endif %}
+                                    
+                                    <span class="text-muted small"><i class="bi bi-chat-left-text me-1"></i>{{ p.comments|length }} Comments</span>
+                                </div>
+
+                                <!-- Flat Comments List -->
+                                <div class="mt-3 pt-3 bg-light rounded p-3">
+                                    <h6 class="fw-bold small text-muted mb-2">Comments</h6>
+                                    
+                                    {% if p.comments %}
+                                        <div class="d-flex flex-column gap-2 mb-3">
+                                            {% for c in p.comments %}
+                                                <div class="p-2 bg-white rounded shadow-sm border-start border-2 border-secondary">
+                                                    <div class="d-flex justify-content-between align-items-center">
+                                                        <strong class="small text-dark">{{ c.user.name if c.user else 'Traveler' }}</strong>
+                                                        <span class="small text-muted" style="font-size:0.75rem;">{{ c.created_at.strftime('%b %d, %H:%M') }}</span>
+                                                    </div>
+                                                    <p class="small text-secondary mb-0">{{ c.comment_text }}</p>
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                    {% else %}
+                                        <p class="small text-muted mb-2">No comments yet. Be the first!</p>
+                                    {% endif %}
+
+                                    <!-- Add Comment Form -->
+                                    {% if current_user.is_authenticated %}
+                                        <form method="POST" action="{{ url_for('add_comment', post_id=p.id) }}" class="d-flex gap-2">
+                                            <input type="text" name="comment_text" class="form-control form-control-sm" placeholder="Write a comment..." required>
+                                            <button type="submit" class="btn btn-sm btn-secondary px-3">Post</button>
+                                        </form>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="card shadow-sm p-5 text-center">
+                    <div class="card-body">
+                        <i class="bi bi-chat-square-text text-danger opacity-50 fs-1 d-block mb-3"></i>
+                        <h4 class="fw-bold">No community posts yet</h4>
+                        <p class="text-muted">Be the first to share a travel update and pin it on the map!</p>
+                    </div>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const postMarkers = [
+            {% for p in posts %}
+            {% if p.lat and p.lng %}
+            {
+                lat: {{ p.lat }},
+                lng: {{ p.lng }},
+                title: "{{ p.location_name|replace('"', '\\"') }}",
+                description: "Posted by {{ p.author.name if p.author else 'Traveler' }}: {{ p.caption[:60]|replace('"', '\\"') }}...",
+                category: "Community Post"
+            }{% if not loop.last %},{% endif %}
+            {% endif %}
+            {% endfor %}
+        ];
+
+        const centerLat = postMarkers.length > 0 ? postMarkers[0].lat : 20.5937;
+        const centerLng = postMarkers.length > 0 ? postMarkers[0].lng : 78.9629;
+
+        initLeafletMap('communityMap', centerLat, centerLng, 3, postMarkers);
+    });
+</script>
+{% endblock %}

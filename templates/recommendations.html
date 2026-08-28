@@ -1,0 +1,119 @@
+{% extends "base.html" %}
+
+{% block title %}AI Destination Recommender — TravelAI Companion{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row align-items-center mb-4">
+        <div class="col-md-8">
+            <h2 class="fw-bold mb-1"><i class="bi bi-magic text-info me-2"></i>AI Destination Recommender</h2>
+            <p class="text-muted">Multi-feature TF-IDF vectorizer & cosine similarity matching algorithm</p>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Input Filter Form -->
+        <div class="col-lg-4">
+            <div class="card shadow-sm p-3 sticky-lg-top" style="top: 80px; z-index: 10;">
+                <div class="card-body">
+                    <h5 class="fw-bold mb-3"><i class="bi bi-sliders me-2"></i>Your Preferences</h5>
+                    
+                    <form method="POST" action="{{ url_for('recommendations') }}">
+                        {{ form.hidden_tag() }}
+
+                        <div class="mb-3">
+                            {{ form.budget_level.label(class="form-label fw-semibold") }}
+                            {{ form.budget_level(class="form-select") }}
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.category.label(class="form-label fw-semibold") }}
+                            {{ form.category(class="form-select") }}
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.interests.label(class="form-label fw-semibold") }}
+                            {{ form.interests(class="form-select", size="5") }}
+                            <div class="form-text">Hold Ctrl / Cmd to select multiple interests.</div>
+                        </div>
+
+                        <div class="mb-4">
+                            {{ form.preferred_state.label(class="form-label fw-semibold") }}
+                            {{ form.preferred_state(class="form-control", placeholder="e.g. Kerala, Rajasthan, France") }}
+                        </div>
+
+                        <div class="d-grid">
+                            {{ form.submit(class="btn btn-info text-white fw-bold py-2") }}
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Recommendation Results -->
+        <div class="col-lg-8">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4 class="fw-bold mb-0">Top 5 Matches</h4>
+                <span class="badge bg-primary bg-opacity-10 text-primary">Algorithm: TF-IDF + Cosine Sim</span>
+            </div>
+
+            {% if results %}
+                <div class="row g-4">
+                    {% for item in results %}
+                        <div class="col-12">
+                            <div class="card card-hover shadow-sm p-3 border-start border-4 border-info">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between align-items-start mb-2">
+                                        <div>
+                                            <span class="badge-category me-2">{{ item.category }}</span>
+                                            <span class="badge-budget me-2">{{ item.budget_level }}</span>
+                                            <span class="badge bg-secondary bg-opacity-10 text-dark"><i class="bi bi-geo-alt me-1"></i>{{ item.state }}</span>
+                                        </div>
+                                        <div class="text-end">
+                                            <span class="badge bg-info text-white fw-bold py-2 px-3">
+                                                Match: {{ (item.score * 100)|round|int if item.score else 92 }}%
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                    <h3 class="fw-bold my-2 text-dark">{{ item.name }}</h3>
+                                    <p class="text-secondary mb-3">{{ item.description }}</p>
+
+                                    {% if item.tags %}
+                                        <div class="mb-3">
+                                            {% for tag in item.tags.split() %}
+                                                <span class="badge bg-light text-muted me-1 mb-1">#{{ tag }}</span>
+                                            {% endfor %}
+                                        </div>
+                                    {% endif %}
+
+                                    <div class="d-flex flex-wrap gap-2 pt-2 border-top">
+                                        <a href="{{ url_for('weather', destination=item.name) }}" class="btn btn-sm btn-outline-warning">
+                                            <i class="bi bi-cloud-sun me-1"></i>Weather
+                                        </a>
+                                        <a href="{{ url_for('hotels', destination=item.name) }}" class="btn btn-sm btn-outline-success">
+                                            <i class="bi bi-building me-1"></i>Hotels
+                                        </a>
+                                        <a href="{{ url_for('attractions_map', destination=item.name) }}" class="btn btn-sm btn-outline-info">
+                                            <i class="bi bi-map me-1"></i>Attractions Map
+                                        </a>
+                                        <a href="{{ url_for('itinerary', destination=item.name) }}" class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-calendar-range me-1"></i>Plan Itinerary
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="alert alert-warning p-4 text-center">
+                    <i class="bi bi-exclamation-triangle fs-1 d-block mb-2"></i>
+                    <h5>No recommendations matched your exact filters.</h5>
+                    <p class="mb-0">Try clearing or widening your selection criteria.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

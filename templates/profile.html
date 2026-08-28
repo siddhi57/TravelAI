@@ -1,0 +1,67 @@
+{% extends "base.html" %}
+
+{% block title %}My Profile — TravelAI Companion{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <div class="row justify-content-center">
+        <div class="col-md-7">
+            <div class="card shadow-md p-4">
+                <div class="card-body">
+                    <div class="d-flex align-items-center gap-4 mb-4 pb-3 border-bottom">
+                        <div>
+                            {% if current_user.profile_photo and current_user.profile_photo != 'default_avatar.png' %}
+                                <img src="{{ url_for('static', filename='uploads/' + current_user.profile_photo) }}" class="profile-avatar" alt="Profile Avatar">
+                            {% else %}
+                                <div class="bg-secondary bg-opacity-20 rounded-circle d-flex align-items-center justify-content-center" style="width:100px; height:100px;">
+                                    <i class="bi bi-person-fill fs-1 text-secondary"></i>
+                                </div>
+                            {% endif %}
+                        </div>
+                        <div>
+                            <h3 class="fw-bold mb-1">{{ current_user.name }}</h3>
+                            <p class="text-muted small mb-1"><i class="bi bi-envelope me-1"></i>{{ current_user.email }}</p>
+                            <span class="badge bg-primary bg-opacity-10 text-primary">Member since {{ current_user.joined_date.strftime('%B %Y') }}</span>
+                        </div>
+                    </div>
+
+                    <h5 class="fw-bold mb-3"><i class="bi bi-pencil-square me-2"></i>Edit Profile Details</h5>
+
+                    <form method="POST" action="{{ url_for('profile') }}" enctype="multipart/form-data">
+                        {{ form.hidden_tag() }}
+
+                        <div class="mb-3">
+                            {{ form.name.label(class="form-label fw-semibold") }}
+                            {{ form.name(class="form-control" + (" is-invalid" if form.name.errors else "")) }}
+                            {% for error in form.name.errors %}
+                                <div class="invalid-feedback">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="mb-3">
+                            {{ form.email.label(class="form-label fw-semibold") }}
+                            {{ form.email(class="form-control" + (" is-invalid" if form.email.errors else "")) }}
+                            {% for error in form.email.errors %}
+                                <div class="invalid-feedback">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="mb-4">
+                            {{ form.profile_photo.label(class="form-label fw-semibold") }}
+                            {{ form.profile_photo(class="form-control" + (" is-invalid" if form.profile_photo.errors else "")) }}
+                            <div class="form-text">Upload JPG, PNG, WEBP or GIF image. Max size 16MB.</div>
+                            {% for error in form.profile_photo.errors %}
+                                <div class="invalid-feedback">{{ error }}</div>
+                            {% endfor %}
+                        </div>
+
+                        <div class="d-grid">
+                            {{ form.submit(class="btn btn-info text-white fw-bold py-2") }}
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,0 +1,104 @@
+{% extends "base.html" %}
+
+{% block title %}Attractions in {{ destination }} — TravelAI Companion{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Header & Search -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body p-4">
+            <div class="row align-items-center gy-3">
+                <div class="col-md-6">
+                    <h3 class="fw-bold mb-1"><i class="bi bi-geo-alt text-info me-2"></i>Nearby Attractions Finder</h3>
+                    <p class="text-muted small mb-0">Geoapify Places API + OpenStreetMap Leaflet Map</p>
+                </div>
+                <div class="col-md-6">
+                    <form method="GET" action="{{ url_for('attractions_map') }}" class="d-flex gap-2">
+                        <input type="text" name="destination" class="form-control" value="{{ destination }}" placeholder="Search destination attractions..." required>
+                        <button type="submit" class="btn btn-info text-white px-4 fw-bold">Explore</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Map & Sidebar -->
+    <div class="row g-4">
+        <!-- Interactive Leaflet OSM Map -->
+        <div class="col-lg-7">
+            <div class="card shadow-sm p-3 h-100">
+                <div class="card-body p-0 d-flex flex-column">
+                    <div class="d-flex justify-content-between align-items-center mb-2 px-2 pt-2">
+                        <h5 class="fw-bold mb-0"><i class="bi bi-map me-2"></i>Interactive Map</h5>
+                        <span class="badge bg-info text-white">Leaflet + OpenStreetMap</span>
+                    </div>
+                    <div id="attractionsMap" class="map-container flex-grow-1"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Sidebar Attractions List -->
+        <div class="col-lg-5">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="fw-bold mb-0">Points of Interest ({{ attractions|length }})</h5>
+                <span class="badge bg-secondary bg-opacity-10 text-dark">Category: Tourist Sights</span>
+            </div>
+
+            {% if attractions %}
+                <div class="d-flex flex-column gap-3 overflow-auto" style="max-height: 520px; padding-right: 5px;">
+                    {% for a in attractions %}
+                        <div class="card shadow-sm p-3 border-start border-3 border-info">
+                            <div class="card-body p-2">
+                                <div class="d-flex justify-content-between align-items-start mb-1">
+                                    <h6 class="fw-bold mb-0 text-dark">{{ a.name }}</h6>
+                                    <span class="badge bg-light text-muted">{{ a.distance_km }} km</span>
+                                </div>
+                                <span class="badge-category d-inline-block my-1">{{ a.category }}</span>
+                                <p class="text-muted small mb-2"><i class="bi bi-geo me-1"></i>{{ a.address }}</p>
+                                <button class="btn btn-sm btn-outline-info py-1 px-2" onclick="focusAttraction({{ a.lat }}, {{ a.lng }}, '{{ a.name }}')">
+                                    <i class="bi bi-geo-fill me-1"></i>Locate Pin
+                                </button>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="alert alert-warning p-4 text-center">
+                    <i class="bi bi-search fs-1 d-block mb-2"></i>
+                    <h5>No attraction pins found.</h5>
+                    <p class="mb-0">Try searching for a major city or region.</p>
+                </div>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const centerLat = {{ coords.lat if coords and coords.lat else 20.5937 }};
+        const centerLng = {{ coords.lng if coords and coords.lng else 78.9629 }};
+
+        const attractionMarkers = [
+            {% for a in attractions %}
+            {
+                lat: {{ a.lat if a.lat else coords.lat }},
+                lng: {{ a.lng if a.lng else coords.lng }},
+                title: "{{ a.name|replace('"', '\\"') }}",
+                description: "{{ a.address|replace('"', '\\"') }}",
+                category: "{{ a.category }}"
+            }{% if not loop.last %},{% endif %}
+            {% endfor %}
+        ];
+
+        window.leafletAttractionMap = initLeafletMap('attractionsMap', centerLat, centerLng, 12, attractionMarkers);
+    });
+
+    function focusAttraction(lat, lng, name) {
+        if (window.leafletAttractionMap) {
+            window.leafletAttractionMap.setView([lat, lng], 15);
+        }
+    }
+</script>
+{% endblock %}

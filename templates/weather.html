@@ -1,0 +1,92 @@
+{% extends "base.html" %}
+
+{% block title %}Weather in {{ destination }} — TravelAI Companion{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <!-- Search Bar -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body p-4">
+            <div class="row align-items-center gy-3">
+                <div class="col-md-6">
+                    <h3 class="fw-bold mb-1"><i class="bi bi-cloud-sun text-warning me-2"></i>Weather Dashboard</h3>
+                    <p class="text-muted small mb-0">Powered by OpenWeatherMap API</p>
+                </div>
+                <div class="col-md-6">
+                    <form method="GET" action="{{ url_for('weather') }}" class="d-flex gap-2">
+                        <input type="text" name="destination" class="form-control" value="{{ destination }}" placeholder="Search destination weather..." required>
+                        <button type="submit" class="btn btn-warning text-dark px-4 fw-bold">Get Weather</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {% if current and current.is_fallback %}
+        <div class="alert alert-info shadow-sm mb-4">
+            <i class="bi bi-info-circle me-2"></i>{{ current.message }}
+        </div>
+    {% endif %}
+
+    <!-- Weather Display -->
+    <div class="row g-4 mb-5">
+        <!-- Current Weather Card -->
+        <div class="col-lg-5">
+            <div class="weather-card p-4 h-100 shadow-md">
+                <div class="d-flex justify-content-between align-items-start mb-3">
+                    <div>
+                        <h2 class="fw-bold mb-0">{{ current.city }}</h2>
+                        <p class="mb-0 text-white-50"><i class="bi bi-geo-alt me-1"></i>{{ current.country }}</p>
+                    </div>
+                    <img src="https://openweathermap.org/img/wn/{{ current.icon }}@2x.png" alt="{{ current.condition }}" style="width: 80px; height: 80px;">
+                </div>
+
+                <div class="my-3">
+                    <div class="weather-temp">{{ current.temp }}°C</div>
+                    <p class="fs-5 text-white fw-medium mb-0">{{ current.condition }}</p>
+                    <p class="small text-white-50">Feels like {{ current.feels_like }}°C</p>
+                </div>
+
+                <div class="row g-2 pt-3 border-top border-white-20 text-center">
+                    <div class="col-6">
+                        <div class="p-2 bg-white bg-opacity-10 rounded">
+                            <i class="bi bi-droplet fs-4 d-block text-info"></i>
+                            <span class="small d-block text-white-50">Humidity</span>
+                            <span class="fw-bold">{{ current.humidity }}%</span>
+                        </div>
+                    </div>
+                    <div class="col-6">
+                        <div class="p-2 bg-white bg-opacity-10 rounded">
+                            <i class="bi bi-wind fs-4 d-block text-warning"></i>
+                            <span class="small d-block text-white-50">Wind Speed</span>
+                            <span class="fw-bold">{{ current.wind_speed }} m/s</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 5-Day Forecast -->
+        <div class="col-lg-7">
+            <div class="card shadow-sm p-4 h-100">
+                <div class="card-body">
+                    <h5 class="fw-bold mb-3"><i class="bi bi-calendar3 me-2"></i>5-Day Weather Forecast</h5>
+                    
+                    <div class="row g-3">
+                        {% for day in forecast %}
+                            <div class="col">
+                                <div class="card border-0 bg-light text-center p-3 h-100">
+                                    <span class="small text-muted fw-bold d-block">{{ day.date }}</span>
+                                    <img src="https://openweathermap.org/img/wn/{{ day.icon }}.png" class="mx-auto" style="width: 50px;" alt="{{ day.condition }}">
+                                    <span class="fs-4 fw-bold d-block my-1">{{ day.temp }}°C</span>
+                                    <span class="small text-secondary">{{ day.condition }}</span>
+                                </div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
