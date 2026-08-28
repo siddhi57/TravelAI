@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}TravelAI Companion — Smart Travel Recommendation & Planning{% endblock %}</title>
+    <title>{% block title %}TravelAI Companion — Smart Travel Platform{% endblock %}</title>
     
     <!-- Bootstrap 5 CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -19,11 +19,14 @@
 <body>
 
     <!-- Navigation Header -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top shadow-sm py-2">
+    <nav class="navbar navbar-expand-lg {% if current_user.is_authenticated and current_user.is_admin %}navbar-dark bg-dark border-bottom border-primary border-3{% else %}navbar-dark bg-dark{% endif %} sticky-top shadow-sm py-2">
         <div class="container">
-            <a class="navbar-brand d-flex align-items-center gap-2" href="{{ url_for('index') }}">
+            <a class="navbar-brand d-flex align-items-center gap-2" href="{{ url_for('admin_dashboard') if current_user.is_authenticated and current_user.is_admin else url_for('index') }}">
                 <i class="bi bi-compass-fill fs-3 text-info"></i>
                 <span>Travel<span class="text-info">AI</span> Companion</span>
+                {% if current_user.is_authenticated and current_user.is_admin %}
+                    <span class="badge bg-primary ms-2 fs-6">ADMIN PANEL</span>
+                {% endif %}
             </a>
             
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarContent">
@@ -32,41 +35,64 @@
             
             <div class="collapse navbar-collapse" id="navbarContent">
                 <ul class="navbar-nav me-auto mb-2 mb-lg-0 ms-lg-3">
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'index' %}active{% endif %}" href="{{ url_for('index') }}">
-                            <i class="bi bi-house-door me-1"></i>Home
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'recommendations' %}active{% endif %}" href="{{ url_for('recommendations') }}">
-                            <i class="bi bi-magic me-1"></i>AI Recommender
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'hotels' %}active{% endif %}" href="{{ url_for('hotels') }}">
-                            <i class="bi bi-building me-1"></i>Hotels
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'weather' %}active{% endif %}" href="{{ url_for('weather') }}">
-                            <i class="bi bi-cloud-sun me-1"></i>Weather
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'attractions_map' %}active{% endif %}" href="{{ url_for('attractions_map') }}">
-                            <i class="bi bi-geo-alt me-1"></i>Attractions Map
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'itinerary' %}active{% endif %}" href="{{ url_for('itinerary') }}">
-                            <i class="bi bi-calendar-range me-1"></i>Itinerary
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link {% if request.endpoint == 'community' %}active{% endif %}" href="{{ url_for('community') }}">
-                            <i class="bi bi-people me-1"></i>Community Feed
-                        </a>
-                    </li>
+                    {% if current_user.is_authenticated and current_user.is_admin %}
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.endpoint == 'admin_dashboard' %}active fw-bold text-white{% endif %}" href="{{ url_for('admin_dashboard') }}">
+                                <i class="bi bi-speedometer2 me-1"></i>Dashboard
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.endpoint == 'admin_destinations' %}active fw-bold text-white{% endif %}" href="{{ url_for('admin_destinations') }}">
+                                <i class="bi bi-geo-alt me-1"></i>Manage Destinations
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.endpoint == 'admin_users' %}active fw-bold text-white{% endif %}" href="{{ url_for('admin_users') }}">
+                                <i class="bi bi-people me-1"></i>Manage Users
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.endpoint == 'admin_posts' %}active fw-bold text-white{% endif %}" href="{{ url_for('admin_posts') }}">
+                                <i class="bi bi-shield-check me-1"></i>Content Moderation
+                            </a>
+                        </li>
+                    {% else %}
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.endpoint == 'index' %}active{% endif %}" href="{{ url_for('index') }}">
+                                <i class="bi bi-house-door me-1"></i>Home
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.endpoint == 'recommendations' %}active{% endif %}" href="{{ url_for('recommendations') }}">
+                                <i class="bi bi-magic me-1"></i>AI Recommender
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.endpoint == 'hotels' %}active{% endif %}" href="{{ url_for('hotels') }}">
+                                <i class="bi bi-building me-1"></i>Hotels
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.endpoint == 'weather' %}active{% endif %}" href="{{ url_for('weather') }}">
+                                <i class="bi bi-cloud-sun me-1"></i>Weather
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.endpoint == 'attractions_map' %}active{% endif %}" href="{{ url_for('attractions_map') }}">
+                                <i class="bi bi-geo-alt me-1"></i>Attractions Map
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.endpoint == 'itinerary' %}active{% endif %}" href="{{ url_for('itinerary') }}">
+                                <i class="bi bi-calendar-range me-1"></i>Itinerary
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a class="nav-link {% if request.endpoint == 'community' %}active{% endif %}" href="{{ url_for('community') }}">
+                                <i class="bi bi-people me-1"></i>Community Feed
+                            </a>
+                        </li>
+                    {% endif %}
                 </ul>
                 
                 <div class="d-flex align-items-center gap-2">
@@ -82,7 +108,7 @@
                             </button>
                             <ul class="dropdown-menu dropdown-menu-end shadow">
                                 {% if current_user.is_admin %}
-                                    <li><a class="dropdown-item fw-bold text-primary" href="{{ url_for('admin_dashboard') }}"><i class="bi bi-shield-lock me-2"></i>Admin Panel</a></li>
+                                    <li><a class="dropdown-item fw-bold text-primary" href="{{ url_for('admin_dashboard') }}"><i class="bi bi-shield-lock me-2"></i>Admin Dashboard</a></li>
                                     <li><hr class="dropdown-divider"></li>
                                 {% endif %}
                                 <li><a class="dropdown-item" href="{{ url_for('profile') }}"><i class="bi bi-person me-2"></i>My Profile</a></li>
@@ -124,7 +150,7 @@
             <div class="row align-items-center gy-3">
                 <div class="col-md-6 text-center text-md-start">
                     <h5 class="text-white mb-1"><i class="bi bi-compass text-info me-2"></i>TravelAI Companion</h5>
-                    <p class="small text-muted mb-0">AI-powered destination recommendations, weather forecasts, nearby hotel search, and custom itinerary generation.</p>
+                    <p class="small text-muted mb-0">AI-powered destination recommendations, weather forecasts, nearby hotel discovery, and smart itineraries.</p>
                 </div>
                 <div class="col-md-6 text-center text-md-end">
                     <span class="badge bg-secondary mb-2">Powered by OpenWeatherMap & Geoapify</span>

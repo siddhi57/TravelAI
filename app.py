@@ -111,6 +111,8 @@ def haversine_distance_km(lat1, lon1, lat2, lon2):
 
 @app.route('/')
 def index():
+    if current_user.is_authenticated and current_user.is_admin:
+        return redirect(url_for('admin_dashboard'))
     featured_destinations = Destination.query.limit(6).all()
     recent_posts = Post.query.order_by(Post.created_at.desc()).limit(3).all()
     return render_template('index.html', destinations=featured_destinations, posts=recent_posts)
@@ -119,6 +121,8 @@ def index():
 @app.route('/register', methods=['GET', 'POST'])
 def register():
     if current_user.is_authenticated:
+        if current_user.is_admin:
+            return redirect(url_for('admin_dashboard'))
         return redirect(url_for('index'))
     form = RegistrationForm()
     if form.validate_on_submit():
@@ -137,6 +141,8 @@ def register():
 @app.route('/login', methods=['GET', 'POST'])
 def login():
     if current_user.is_authenticated:
+        if current_user.is_admin:
+            return redirect(url_for('admin_dashboard'))
         return redirect(url_for('index'))
     form = LoginForm()
     if form.validate_on_submit():
@@ -144,6 +150,9 @@ def login():
         if user and user.check_password(form.password.data):
             login_user(user, remember=form.remember.data)
             next_page = request.args.get('next')
+            if user.is_admin:
+                flash(f'Welcome Admin, {user.name}!', 'success')
+                return redirect(url_for('admin_dashboard'))
             flash(f'Welcome back, {user.name}!', 'success')
             return redirect(next_page) if next_page else redirect(url_for('index'))
         else:
