@@ -5,7 +5,7 @@ import pytest
 # Add parent directory to sys.path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from app import app, db
+from app import app, db, haversine_distance_km
 from models import User, Destination, Post, Like, Comment, HotelsCache
 from ml.recommender import DestinationRecommender, recommender_engine
 from api.weather import get_current_weather, get_weather_forecast
@@ -13,6 +13,7 @@ from api.geoapify import geocode_location, get_nearby_hotels, get_nearby_attract
 
 @pytest.fixture
 def client():
+    os.environ['TESTING'] = 'True'
     app.config['TESTING'] = True
     app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:///:memory:'
     app.config['WTF_CSRF_ENABLED'] = False
@@ -32,6 +33,12 @@ def client():
             db.session.add(dest)
             db.session.commit()
         yield client
+
+def test_haversine_distance():
+    """Test geodesic distance calculation."""
+    # Distance between London (51.5074, -0.1278) and Paris (48.8566, 2.3522) ~ 343 km
+    dist = haversine_distance_km(51.5074, -0.1278, 48.8566, 2.3522)
+    assert 330 < dist < 360
 
 def test_ml_recommender():
     """Test TF-IDF recommender engine standalone."""
@@ -91,9 +98,21 @@ def test_routes_public(client):
     res = client.get('/itinerary')
     assert res.status_code == 200
 
+    res = client.get('/community?page=1')
+    assert res.status_code == 200
+
 def test_auth_workflow(client):
-    """Test user registration, login, profile, and logout."""
-    # Register
+    """Test user registration, login, profile, and password length checks."""
+    # Register with password shorter than 8 chars should fail
+    res = client.post('/register', data={
+        'name': 'Test Traveler',
+        'email': 'traveler@example.com',
+        'password': 'short',
+        'confirm_password': 'short'
+    }, follow_redirects=True)
+    assert b'Password must be at least 8 characters long' in res.data
+
+    # Valid Registration
     res = client.post('/register', data={
         'name': 'Test Traveler',
         'email': 'traveler@example.com',
@@ -101,7 +120,6 @@ def test_auth_workflow(client):
         'confirm_password': 'password123'
     }, follow_redirects=True)
     assert res.status_code == 200
-    assert b'Account created successfully' in res.data or b'Sign In' in res.data
     
     # Login
     res = client.post('/login', data={

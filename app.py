@@ -29,35 +29,61 @@ login_manager.login_message_category = 'info'
 def load_user(user_id):
     return db.session.get(User, int(user_id))
 
-# Initialize database and populate dataset if empty
+# Initialize database schema
 def init_db():
     with app.app_context():
         db.create_all()
-        # Seed destinations if table is empty
-        if Destination.query.count() == 0:
-            csv_path = os.path.join(app.root_path, 'datasets', 'destinations.csv')
-            if os.path.exists(csv_path):
-                import pandas as pd
-                df = pd.read_csv(csv_path)
-                df.fillna('', inplace=True)
-                for _, row in df.iterrows():
-                    dest = Destination(
-                        name=row['name'],
-                        state=row['state'],
-                        category=row['category'],
-                        budget_level=row['budget_level'],
-                        description=row['description'],
-                        tags=row['tags']
-                    )
-                    db.session.add(dest)
-                db.session.commit()
-                print("Database initialized & destinations dataset seeded successfully!")
 
 init_db()
 
-# Allowed image extension checker
+# CLI Command for Database Seeding (Prevents multi-worker Gunicorn race conditions)
+@app.cli.command("seed-db")
+def seed_db_command():
+    """Seeds the database with initial destinations dataset from CSV."""
+    csv_path = os.path.join(app.root_path, 'datasets', 'destinations.csv')
+    if not os.path.exists(csv_path):
+        print(f"Error: dataset CSV not found at {csv_path}")
+        return
+        
+    import pandas as pd
+    df = pd.read_csv(csv_path)
+    df.fillna('', inplace=True)
+    added_count = 0
+    for _, row in df.iterrows():
+        existing = Destination.query.filter_by(name=row['name']).first()
+        if not existing:
+            dest = Destination(
+                name=row['name'],
+                state=row['state'],
+                category=row['category'],
+                budget_level=row['budget_level'],
+                description=row['description'],
+                tags=row['tags']
+            )
+            db.session.add(dest)
+            added_count += 1
+    db.session.commit()
+    print(f"Database seeded successfully! Added {added_count} destinations.")
+
+
+# Helper for allowed upload file extensions
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
+
+
+# Geodesic Distance Helper (Haversine Formula) for Itinerary Proximity Sorting
+def haversine_distance_km(lat1, lon1, lat2, lon2):
+    """
+    Calculates great-circle geodesic distance between two points on Earth in kilometers.
+    Accurate across all latitudes (replaces raw Euclidean approximation).
+    """
+    R = 6371.0  # Earth's radius in kilometers
+    dlat = math.radians(lat2 - lat1)
+    dlon = math.radians(lon2 - lon1)
+    a = (math.sin(dlat / 2) ** 2 +
+         math.cos(math.radians(lat1)) * math.cos(math.radians(lat2)) * math.sin(dlon / 2) ** 2)
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+    return R * c
 
 
 # --- ROUTES ---
@@ -117,13 +143,6 @@ def logout():
 def profile():
     form = ProfileForm(obj=current_user)
     if form.validate_on_submit():
-        # Check email uniqueness if changed
-        if form.email.data.lower() != current_user.email.lower():
-            existing = User.query.filter_by(email=form.email.data.lower()).first()
-            if existing:
-                flash('That email is already in use by another account.', 'danger')
-                return render_template('profile.html', form=form)
-        
         current_user.name = sanitize_html(form.name.data)
         current_user.email = form.email.data.strip().lower()
         
@@ -161,10 +180,11 @@ def recommendations():
                 top_n=5
             )
         except Exception as e:
-            flash(f"Error computing recommendations: {str(e)}", "danger")
-            results = []
+            # Log server-side securely without leaking stack details to user
+            app.logger.error(f"Error computing recommendations: {str(e)}", exc_info=True)
+            flash("Unable to process recommendations at this time. Displaying top popular destinations instead.", "warning")
+            results = recommender_engine.recommend(top_n=5)
     else:
-        # Default recommendations for first view
         results = recommender_engine.recommend(top_n=5)
         
     return render_template('recommendations.html', form=form, results=results)
@@ -175,7 +195,8 @@ def hotels():
     destination_name = request.args.get('destination', 'Goa').strip()
     budget_filter = request.args.get('budget', 'Any').strip()
     
-    dest_obj = Destination.query.filter(Destination.name.ilike(destination_name)).first()
+    # Deterministic destination query matching exact name first, ordered by ID
+    dest_obj = Destination.query.filter(Destination.name.ilike(destination_name)).order_by(Destination.id.asc()).first()
     dest_id = dest_obj.id if dest_obj else None
     
     # Check cache table for recent hotels (within 24 hours)
@@ -210,10 +231,11 @@ def hotels():
                     db.session.add(cache_item)
                 db.session.commit()
         except Exception as e:
-            flash(f"Could not retrieve hotel data: {str(e)}", "warning")
+            app.logger.error(f"Hotel fetch error: {str(e)}", exc_info=True)
+            flash("Unable to fetch live hotel updates. Displaying available results.", "warning")
             cached_hotels = []
 
-    # Sort & filter
+    # Filter by budget if specified
     if budget_filter and budget_filter != 'Any':
         filtered = [h for h in cached_hotels if str(h.get('price_tier')).lower() == budget_filter.lower()]
         if filtered:
@@ -268,6 +290,7 @@ def itinerary():
             
     days_plan = None
     destination_name = ""
+    is_data_thin = False
     
     if form.validate_on_submit():
         destination_name = form.destination.data.strip()
@@ -279,16 +302,20 @@ def itinerary():
         dest_coords = geocode_location(destination_name)
         c_lat, c_lng = dest_coords['lat'], dest_coords['lng']
         
-        # --- NAIVE PROXIMITY SORTING ---
-        # Note: Full route optimization (TSP / shortest path calculation) is planned for future enhancements.
-        # Here we perform a spatial proximity sort based on Euclidean distance from destination center.
-        def calc_distance(item):
-            lat_diff = item.get('lat', c_lat) - c_lat
-            lng_diff = item.get('lng', c_lng) - c_lng
-            return math.sqrt(lat_diff**2 + lng_diff**2)
+        # --- GEODESIC HAVERSINE DISTANCE SORTING ---
+        # Note: Full route optimization (TSP / Traveling Salesperson shortest path calculation) is planned for future enhancements.
+        # We sort attractions by Haversine geodesic distance from destination center.
+        def calc_geo_distance(item):
+            i_lat = item.get('lat', c_lat)
+            i_lng = item.get('lng', c_lng)
+            return haversine_distance_km(c_lat, c_lng, i_lat, i_lng)
             
-        sorted_attractions = sorted(raw_attractions, key=calc_distance)
+        sorted_attractions = sorted(raw_attractions, key=calc_geo_distance)
         
+        needed_activities = num_days * 3
+        if len(sorted_attractions) < needed_activities:
+            is_data_thin = True
+            
         # Group 2-3 activities per day
         days_plan = []
         activities_per_day = 3
@@ -302,25 +329,29 @@ def itinerary():
                 if attraction_idx < len(sorted_attractions):
                     att = sorted_attractions[attraction_idx]
                     attraction_idx += 1
+                    is_simulated = False
                 else:
-                    # Fallback activity generator if limit reached
+                    # Generic fallback activity when places run thin
                     att = {
                         'name': f"{destination_name} Local Explorer & Relaxation",
                         'category': 'Leisure',
                         'address': f"Downtown {destination_name}"
                     }
+                    is_simulated = True
+                    
                 day_activities.append({
                     'slot': slot,
                     'title': att.get('name'),
                     'category': att.get('category'),
-                    'address': att.get('address')
+                    'address': att.get('address'),
+                    'is_simulated': is_simulated
                 })
             days_plan.append({
                 'day_number': day,
                 'activities': day_activities
             })
 
-    return render_template('itinerary.html', form=form, days_plan=days_plan, destination=destination_name)
+    return render_template('itinerary.html', form=form, days_plan=days_plan, destination=destination_name, is_data_thin=is_data_thin)
 
 
 @app.route('/community', methods=['GET', 'POST'])
@@ -357,10 +388,21 @@ def community():
         flash('Your post has been published to the community feed!', 'success')
         return redirect(url_for('community'))
 
-    posts = Post.query.order_by(Post.created_at.desc()).all()
-    posts_data = [p.to_dict(current_user_id=current_user.id if current_user.is_authenticated else None) for p in posts]
+    # Pagination: 5 posts per page
+    page = request.args.get('page', 1, type=int)
+    pagination = Post.query.order_by(Post.created_at.desc()).paginate(page=page, per_page=5, error_out=False)
+    posts = pagination.items
     
-    return render_template('community.html', form=form, comment_form=comment_form, posts=posts, posts_data=posts_data)
+    # Map markers from all posts with valid lat/lng
+    map_posts = Post.query.filter(Post.lat.isnot(None), Post.lng.isnot(None)).order_by(Post.created_at.desc()).limit(20).all()
+    posts_data = [p.to_dict(current_user_id=current_user.id if current_user.is_authenticated else None) for p in map_posts]
+    
+    return render_template('community.html', 
+                           form=form, 
+                           comment_form=comment_form, 
+                           posts=posts, 
+                           pagination=pagination, 
+                           posts_data=posts_data)
 
 
 @app.route('/community/like/<int:post_id>', methods=['POST'])
@@ -421,4 +463,5 @@ def internal_error(error):
 
 
 if __name__ == '__main__':
-    app.run(debug=True, host='127.0.0.1', port=5000)
+    # Flask debug mode is gated behind FLASK_DEBUG environment variable
+    app.run(debug=app.config['DEBUG'], host='127.0.0.1', port=5000)

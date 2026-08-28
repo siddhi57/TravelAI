@@ -7,7 +7,7 @@
     <div class="row align-items-center mb-4">
         <div class="col-md-8">
             <h2 class="fw-bold mb-1"><i class="bi bi-calendar-range text-primary me-2"></i>AI Day-by-Day Itinerary Generator</h2>
-            <p class="text-muted">Generates structured daily activity plans sorted by spatial proximity</p>
+            <p class="text-muted">Generates structured daily activity plans sorted by spatial geodesic proximity (Haversine distance)</p>
         </div>
     </div>
 
@@ -50,14 +50,21 @@
                 <div class="card shadow-sm p-4 mb-4 bg-primary bg-opacity-10 border-primary">
                     <div class="d-flex justify-content-between align-items-center">
                         <div>
-                            <h4 class="fw-bold mb-1 text-primary">{{ days_plan|length }}-Day Smart Plan for {{ destination }}</h4>
-                            <p class="small text-muted mb-0"><i class="bi bi-info-circle me-1"></i>Activities organized via spatial proximity sort (lat/lng coordinates).</p>
+                            <h4 class="fw-bold mb-1 text-primary">{{ days_plan|length }}-Day Plan for {{ destination }}</h4>
+                            <p class="small text-muted mb-0"><i class="bi bi-geo me-1"></i>Sorted using Haversine geodesic distance from center.</p>
                         </div>
                         <a href="{{ url_for('hotels', destination=destination) }}" class="btn btn-sm btn-success">
                             <i class="bi bi-building me-1"></i>Book Hotels
                         </a>
                     </div>
                 </div>
+
+                {% if is_data_thin %}
+                    <div class="alert alert-info shadow-sm mb-4">
+                        <i class="bi bi-info-circle me-2"></i>
+                        <strong>Limited Places Note:</strong> Live attraction data for this destination was sparse. Some schedule slots have been supplemented with recommended local explorer activities.
+                    </div>
+                {% endif %}
 
                 <div class="mt-4">
                     {% for day in days_plan %}
@@ -67,11 +74,13 @@
                             <div class="row g-3">
                                 {% for act in day.activities %}
                                     <div class="col-12">
-                                        <div class="card shadow-sm p-3 border-start border-3 border-primary">
+                                        <div class="card shadow-sm p-3 border-start border-3 {% if act.is_simulated %}border-secondary bg-light{% else %}border-primary{% endif %}">
                                             <div class="card-body p-2">
                                                 <div class="d-flex justify-content-between align-items-center mb-2">
                                                     <span class="badge bg-primary text-white fw-semibold">{{ act.slot }}</span>
-                                                    {% if act.category %}
+                                                    {% if act.is_simulated %}
+                                                        <span class="badge bg-secondary">Suggested Activity</span>
+                                                    {% elif act.category %}
                                                         <span class="badge-category">{{ act.category }}</span>
                                                     {% endif %}
                                                 </div>

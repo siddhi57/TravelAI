@@ -1,0 +1,22 @@
+# Environment variables
+.env
+
+# SQLite Database
+*.db
+*.sqlite3
+
+# Python Byte-code & Cache
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+
+# User Uploads (keep directory, ignore uploaded user files except default avatar)
+static/uploads/*
+!static/uploads/default_avatar.png
+
+# IDE & OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db

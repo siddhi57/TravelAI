@@ -3,6 +3,7 @@ from flask_wtf import FlaskForm
 from flask_wtf.file import FileField, FileAllowed
 from wtforms import StringField, PasswordField, SubmitField, BooleanField, SelectField, SelectMultipleField, TextAreaField, IntegerField
 from wtforms.validators import DataRequired, Email, EqualTo, Length, ValidationError, NumberRange
+from flask_login import current_user
 from models import User
 
 def sanitize_html(text):
@@ -12,17 +13,43 @@ def sanitize_html(text):
     # Strip all HTML tags for plain text user inputs
     return bleach.clean(text, tags=[], strip=True)
 
+
+class UniqueEmailValidator:
+    """Reusable validator for email uniqueness across Registration and Profile forms."""
+    def __init__(self, message='Email address is already registered. Please use another email.'):
+        self.message = message
+
+    def __call__(self, form, field):
+        email_clean = field.data.strip().lower() if field.data else ""
+        if not email_clean:
+            return
+            
+        # Ignore current logged-in user's own email on profile update
+        if current_user and current_user.is_authenticated and current_user.email.lower() == email_clean:
+            return
+
+        user = User.query.filter_by(email=email_clean).first()
+        if user:
+            raise ValidationError(self.message)
+
+
+class PasswordComplexityValidator:
+    """Ensures password meets security criteria (at least 8 chars)."""
+    def __init__(self, min_length=8):
+        self.min_length = min_length
+
+    def __call__(self, form, field):
+        pwd = field.data or ""
+        if len(pwd) < self.min_length:
+            raise ValidationError(f"Password must be at least {self.min_length} characters long.")
+
+
 class RegistrationForm(FlaskForm):
     name = StringField('Full Name', validators=[DataRequired(), Length(min=2, max=100)])
-    email = StringField('Email Address', validators=[DataRequired(), Email(), Length(max=120)])
-    password = PasswordField('Password', validators=[DataRequired(), Length(min=6, max=50)])
+    email = StringField('Email Address', validators=[DataRequired(), Email(), Length(max=120), UniqueEmailValidator()])
+    password = PasswordField('Password', validators=[DataRequired(), PasswordComplexityValidator(8), Length(max=50)])
     confirm_password = PasswordField('Confirm Password', validators=[DataRequired(), EqualTo('password', message='Passwords must match')])
     submit = SubmitField('Create Account')
-
-    def validate_email(self, email):
-        user = User.query.filter_by(email=email.data.strip().lower()).first()
-        if user:
-            raise ValidationError('Email address is already registered. Please login.')
 
 
 class LoginForm(FlaskForm):
@@ -34,7 +61,7 @@ class LoginForm(FlaskForm):
 
 class ProfileForm(FlaskForm):
     name = StringField('Full Name', validators=[DataRequired(), Length(min=2, max=100)])
-    email = StringField('Email Address', validators=[DataRequired(), Email(), Length(max=120)])
+    email = StringField('Email Address', validators=[DataRequired(), Email(), Length(max=120), UniqueEmailValidator()])
     profile_photo = FileField('Update Profile Photo', validators=[FileAllowed(['jpg', 'jpeg', 'png', 'webp', 'gif'], 'Images only!')])
     submit = SubmitField('Save Profile')
 

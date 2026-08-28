@@ -69,7 +69,7 @@
             <h4 class="fw-bold mb-3">Recent Community Posts</h4>
 
             {% if posts %}
-                <div class="d-flex flex-column gap-4">
+                <div class="d-flex flex-column gap-4 mb-4">
                     {% for p in posts %}
                         <div class="card shadow-sm p-3">
                             <div class="card-body p-2">
@@ -150,6 +150,30 @@
                         </div>
                     {% endfor %}
                 </div>
+
+                <!-- Pagination UI Controls -->
+                {% if pagination and pagination.pages > 1 %}
+                    <nav aria-label="Community Feed Pages">
+                        <ul class="pagination justify-content-center">
+                            <li class="page-item {% if not pagination.has_prev %}disabled{% endif %}">
+                                <a class="page-link" href="{{ url_for('community', page=pagination.prev_num) if pagination.has_prev else '#' }}">Previous</a>
+                            </li>
+                            {% for p in pagination.iter_pages(left_edge=1, right_edge=1, left_current=2, right_current=2) %}
+                                {% if p %}
+                                    <li class="page-item {% if p == pagination.page %}active{% endif %}">
+                                        <a class="page-link" href="{{ url_for('community', page=p) }}">{{ p }}</a>
+                                    </li>
+                                {% else %}
+                                    <li class="page-item disabled"><span class="page-link">…</span></li>
+                                {% endif %}
+                            {% endfor %}
+                            <li class="page-item {% if not pagination.has_next %}disabled{% endif %}">
+                                <a class="page-link" href="{{ url_for('community', page=pagination.next_num) if pagination.has_next else '#' }}">Next</a>
+                            </li>
+                        </ul>
+                    </nav>
+                {% endif %}
+
             {% else %}
                 <div class="card shadow-sm p-5 text-center">
                     <div class="card-body">
@@ -168,13 +192,13 @@
 <script>
     document.addEventListener('DOMContentLoaded', function() {
         const postMarkers = [
-            {% for p in posts %}
+            {% for p in posts_data %}
             {% if p.lat and p.lng %}
             {
                 lat: {{ p.lat }},
                 lng: {{ p.lng }},
                 title: "{{ p.location_name|replace('"', '\\"') }}",
-                description: "Posted by {{ p.author.name if p.author else 'Traveler' }}: {{ p.caption[:60]|replace('"', '\\"') }}...",
+                description: "Posted by {{ p.author_name|replace('"', '\\"') }}: {{ p.caption[:60]|replace('"', '\\"') }}...",
                 category: "Community Post"
             }{% if not loop.last %},{% endif %}
             {% endif %}

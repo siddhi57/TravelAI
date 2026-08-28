@@ -60,7 +60,8 @@ class HotelsCache(db.Model):
     __tablename__ = 'hotels_cache'
     
     id = db.Column(db.Integer, primary_key=True)
-    destination_id = db.Column(db.Integer, db.ForeignKey('destinations.id', ondelete='CASCADE'), nullable=True)
+    # destination_id is non-nullable to prevent orphaned hotel cache entries
+    destination_id = db.Column(db.Integer, db.ForeignKey('destinations.id', ondelete='CASCADE'), nullable=False)
     hotel_name = db.Column(db.String(150), nullable=False)
     address = db.Column(db.String(255), nullable=True)
     rating = db.Column(db.Float, nullable=True)
@@ -88,7 +89,8 @@ class Post(db.Model):
     
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
-    caption = db.Column(db.Text, nullable=False)
+    # DB-level length constraint of 1000 characters on caption
+    caption = db.Column(db.String(1000), nullable=False)
     image_path = db.Column(db.String(255), nullable=True)
     location_name = db.Column(db.String(150), nullable=True)
     lat = db.Column(db.Float, nullable=True)
@@ -135,7 +137,8 @@ class Comment(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
     post_id = db.Column(db.Integer, db.ForeignKey('posts.id', ondelete='CASCADE'), nullable=False)
-    comment_text = db.Column(db.Text, nullable=False)
+    # DB-level length constraint of 500 characters on comment_text
+    comment_text = db.Column(db.String(500), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     def to_dict(self):
