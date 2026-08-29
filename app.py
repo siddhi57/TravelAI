@@ -442,6 +442,31 @@ def like_post(post_id):
     return redirect(url_for('community'))
 
 
+@app.route('/community/delete/<int:post_id>', methods=['POST'])
+@login_required
+def delete_post(post_id):
+    post = db.get_or_404(Post, post_id)
+    
+    # Check if logged in user is author or admin
+    if post.user_id != current_user.id and not current_user.is_admin:
+        flash("You are not authorized to delete this post.", "danger")
+        abort(403)
+        
+    # Delete uploaded image file from disk if present
+    if post.image_path:
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], post.image_path)
+        if os.path.exists(file_path):
+            try:
+                os.remove(file_path)
+            except Exception:
+                pass
+
+    db.session.delete(post)
+    db.session.commit()
+    flash("Post deleted successfully.", "success")
+    return redirect(url_for('community'))
+
+
 @app.route('/community/comment/<int:post_id>', methods=['POST'])
 @login_required
 def add_comment(post_id):

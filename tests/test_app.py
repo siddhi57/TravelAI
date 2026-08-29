@@ -187,3 +187,34 @@ def test_admin_dashboard_and_management(client):
     res = client.post(f'/admin/users/toggle_admin/{reg_id}', follow_redirects=True)
     assert res.status_code == 200
     assert b'Admin privileges granted' in res.data
+
+
+def test_community_post_deletion(client):
+    """Test user can delete their own post, but unauthorized user cannot."""
+    # Register Author
+    client.post('/register', data={'name': 'Author User', 'email': 'author@example.com', 'password': 'password123', 'confirm_password': 'password123'})
+    client.post('/login', data={'email': 'author@example.com', 'password': 'password123'})
+    
+    # Create Post
+    client.post('/community', data={'caption': 'Deleting soon post', 'location_name': 'Goa'}, follow_redirects=True)
+    
+    with app.app_context():
+        post = Post.query.filter_by(caption='Deleting soon post').first()
+        assert post is not None
+        post_id = post.id
+
+    # Register Stranger User
+    client.get('/logout')
+    client.post('/register', data={'name': 'Stranger User', 'email': 'stranger@example.com', 'password': 'password123', 'confirm_password': 'password123'})
+    client.post('/login', data={'email': 'stranger@example.com', 'password': 'password123'})
+
+    # Stranger tries to delete Author's post -> should receive 403 Forbidden
+    res = client.post(f'/community/delete/{post_id}')
+    assert res.status_code == 403
+
+    # Log in back as Author and delete post -> should succeed
+    client.get('/logout')
+    client.post('/login', data={'email': 'author@example.com', 'password': 'password123'})
+    res = client.post(f'/community/delete/{post_id}', follow_redirects=True)
+    assert res.status_code == 200
+    assert b'Post deleted successfully' in res.data
