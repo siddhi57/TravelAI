@@ -32,14 +32,12 @@ The app integrates two external API services (both offer free tiers):
 
 1. **OpenWeatherMap API**:
    - Register at [https://openweathermap.org/api](https://openweathermap.org/api)
-   - Copy your API Key under **API keys**.
 2. **Geoapify Places & Geocoding API**:
    - Register at [https://www.geoapify.com/](https://www.geoapify.com/)
-   - Create a project and copy your API Key.
 
 > 💡 **Graceful Fallback Mode**: If API keys are left blank or calls fail/time out, the app automatically uses built-in realistic fallback data so all features remain fully functional without breaking.
 
----
+
 
 ## 🚀 Installation & Setup Guide
 
