@@ -1,0 +1,87 @@
+<!-- Floating TravelAI Chatbot Widget -->
+<div id="chatbotContainer" class="chatbot-wrapper">
+    <!-- Floating Action Button (FAB) -->
+    <button id="chatbotToggleBtn" class="btn btn-info chatbot-fab shadow-lg text-white" type="button" aria-label="Toggle TravelAI Assistant" title="Chat with TravelAI Assistant">
+        <i class="bi bi-stars fs-4 chatbot-icon-open"></i>
+        <i class="bi bi-x-lg fs-4 chatbot-icon-close d-none"></i>
+        <span class="chatbot-badge-pulse" title="AI Ready"></span>
+    </button>
+
+    <!-- Chat Window Container -->
+    <div id="chatbotWindow" class="card shadow-lg chatbot-window d-none" aria-hidden="true">
+        <!-- Chat Header -->
+        <div class="card-header bg-dark text-white d-flex align-items-center justify-content-between py-2 px-3 border-bottom border-info border-2">
+            <div class="d-flex align-items-center gap-2">
+                <div class="chatbot-avatar-circle bg-info text-dark d-flex align-items-center justify-content-center">
+                    <i class="bi bi-compass-fill fs-5"></i>
+                </div>
+                <div>
+                    <h6 class="mb-0 fw-bold d-flex align-items-center gap-1">
+                        Travel<span class="text-info">AI</span> Guide
+                        <span class="badge bg-success-subtle text-success border border-success-subtle px-1 py-0 fs-8">Online</span>
+                    </h6>
+                    <small class="text-muted fs-8">Gemini 3.8 Flash • Smart Travel Assistant</small>
+                </div>
+            </div>
+            <div class="d-flex align-items-center gap-1">
+                <button id="chatbotClearBtn" type="button" class="btn btn-sm btn-link text-muted p-1 hover-text-white" title="Clear chat history">
+                    <i class="bi bi-arrow-counterclockwise fs-6"></i>
+                </button>
+                <button id="chatbotCloseBtn" type="button" class="btn btn-sm btn-link text-muted p-1 hover-text-white" title="Minimize chat">
+                    <i class="bi bi-x-lg fs-6"></i>
+                </button>
+            </div>
+        </div>
+
+        <!-- Chat Messages Scroll Area -->
+        <div id="chatbotMessages" class="card-body chatbot-messages p-3">
+            <!-- Welcome Bot Message -->
+            <div class="chat-msg chat-msg-bot d-flex gap-2 mb-3">
+                <div class="chat-msg-avatar flex-shrink-0">
+                    <div class="chatbot-mini-avatar bg-info text-dark">
+                        <i class="bi bi-stars"></i>
+                    </div>
+                </div>
+                <div class="chat-msg-bubble shadow-sm p-3 rounded-3">
+                    <p class="mb-2 fw-semibold text-dark">Hello! I'm your TravelAI Assistant ✈️</p>
+                    <p class="mb-2 small text-secondary">
+                        Ask me anything about destination ideas, custom itineraries, packing essentials, regional attractions, or best times to travel!
+                    </p>
+                    <div class="chat-suggestions d-flex flex-wrap gap-1 mt-2">
+                        <button type="button" class="btn btn-xs btn-outline-info rounded-pill chat-suggestion-chip" data-prompt="Suggest a 3-day itinerary for Goa">🏝️ 3-day Goa Plan</button>
+                        <button type="button" class="btn btn-xs btn-outline-info rounded-pill chat-suggestion-chip" data-prompt="What is the best time of year to visit Manali?">🏔️ Best time for Manali</button>
+                        <button type="button" class="btn btn-xs btn-outline-info rounded-pill chat-suggestion-chip" data-prompt="What are essential items to pack for an international trip?">🎒 Travel Packing Essentials</button>
+                        <button type="button" class="btn btn-xs btn-outline-info rounded-pill chat-suggestion-chip" data-prompt="Give me budget-friendly destination recommendations in India">💰 Budget Destinations</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Typing Indicator (Hidden by default) -->
+            <div id="chatbotTypingIndicator" class="chat-msg chat-msg-bot d-flex gap-2 mb-3 d-none">
+                <div class="chat-msg-avatar flex-shrink-0">
+                    <div class="chatbot-mini-avatar bg-info text-dark">
+                        <i class="bi bi-stars"></i>
+                    </div>
+                </div>
+                <div class="chat-msg-bubble chat-typing-bubble shadow-sm px-3 py-2 rounded-3">
+                    <span class="typing-dot"></span>
+                    <span class="typing-dot"></span>
+                    <span class="typing-dot"></span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chat Input Footer -->
+        <div class="card-footer bg-light p-2 border-top">
+            <form id="chatbotForm" class="d-flex gap-2 align-items-center" autocomplete="off">
+                <input id="chatbotInput" type="text" class="form-control form-control-sm rounded-pill px-3" placeholder="Ask TravelAI a question..." maxlength="1000" required>
+                <button id="chatbotSendBtn" type="submit" class="btn btn-info btn-sm rounded-circle text-white shadow-sm flex-shrink-0 chatbot-send-btn" title="Send message">
+                    <i class="bi bi-send-fill"></i>
+                </button>
+            </form>
+            <div class="text-center mt-1">
+                <span class="chatbot-disclaimer text-muted">Powered by Gemini. Verify important travel details.</span>
+            </div>
+        </div>
+    </div>
+</div>

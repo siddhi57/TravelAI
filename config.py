@@ -23,6 +23,8 @@ class Config:
     
     OPENWEATHER_API_KEY = os.environ.get('OPENWEATHER_API_KEY', '')
     GEOAPIFY_API_KEY = os.environ.get('GEOAPIFY_API_KEY', '')
+    GEMINI_API_KEY = os.environ.get('GEMINI_API_KEY', '')
+    GEMINI_MODEL = os.environ.get('GEMINI_MODEL', 'gemini-3.8-flash')
     
     UPLOAD_FOLDER = os.path.join(BASE_DIR, 'static', 'uploads')
     MAX_CONTENT_LENGTH = 16 * 1024 * 1024  # 16 MB max upload size

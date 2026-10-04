@@ -13,3 +13,4 @@ bleach==6.2.0
 email-validator==2.3.0
 gunicorn==23.0.0
 pytest==8.3.4
+google-genai>=2.25.0

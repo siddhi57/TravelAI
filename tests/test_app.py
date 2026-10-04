@@ -15,6 +15,7 @@ from models import User, Destination, Post, Like, Comment, HotelsCache
 from ml.recommender import DestinationRecommender, recommender_engine
 from api.weather import get_current_weather, get_weather_forecast
 from api.geoapify import geocode_location, get_nearby_hotels, get_nearby_attractions
+from api.gemini import ask_travel_gemini
 
 @pytest.fixture
 def client():
@@ -218,3 +219,65 @@ def test_community_post_deletion(client):
     res = client.post(f'/community/delete/{post_id}', follow_redirects=True)
     assert res.status_code == 200
     assert b'Post deleted successfully' in res.data
+
+
+def test_gemini_wrapper_offline():
+    """Test Gemini wrapper returns realistic travel advice in offline fallback mode."""
+    reply = ask_travel_gemini("Suggest a 3-day itinerary for Goa")
+    assert reply is not None
+    assert len(reply) > 20
+    assert "Itinerary" in reply or "Day" in reply or "TravelAI" in reply
+
+
+def test_api_chat_endpoint_valid(client):
+    """Test /api/chat endpoint with valid JSON prompt."""
+    res = client.post('/api/chat', json={
+        'message': 'What should I pack for a mountain trek?',
+        'history': []
+    })
+    assert res.status_code == 200
+    data = res.get_json()
+    assert data['success'] is True
+    assert 'reply' in data
+    assert len(data['reply']) > 0
+
+
+def test_api_chat_endpoint_empty_message(client):
+    """Test /api/chat endpoint rejects empty message."""
+    res = client.post('/api/chat', json={'message': '   '})
+    assert res.status_code == 400
+    data = res.get_json()
+    assert data['success'] is False
+
+
+def test_api_chat_endpoint_non_json(client):
+    """Test /api/chat endpoint rejects non-JSON request."""
+    res = client.post('/api/chat', data='message=hello')
+    assert res.status_code == 400
+
+
+def test_gemini_503_retry_and_fallback(monkeypatch):
+    """Test that HTTP 503 triggers 3 retries with [2, 4, 8] backoff and falls back gracefully."""
+    from unittest.mock import MagicMock
+    from api.gemini import _ask_via_rest_api
+
+    sleep_calls = []
+    monkeypatch.setattr('time.sleep', lambda s: sleep_calls.append(s))
+    
+    mock_response = MagicMock()
+    mock_response.status_code = 503
+    mock_response.text = '{"error": {"code": 503, "message": "High demand"}}'
+    
+    post_calls = []
+    def mock_post(*args, **kwargs):
+        post_calls.append(args)
+        return mock_response
+        
+    monkeypatch.setattr('requests.post', mock_post)
+
+    reply = _ask_via_rest_api('fake_key', 'gemini-3.8-flash', 'Plan my trip')
+    assert reply is None
+    assert sleep_calls == [2, 4, 8]
+    assert len(post_calls) == 4  # 1 initial + 3 retries
+
+

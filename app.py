@@ -12,6 +12,7 @@ from forms import RegistrationForm, LoginForm, ProfileForm, DestinationForm, Rec
 from ml.recommender import recommender_engine
 from api.weather import get_current_weather, get_weather_forecast
 from api.geoapify import geocode_location, get_nearby_hotels, get_nearby_attractions
+from api.gemini import ask_travel_gemini
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -660,6 +661,40 @@ def admin_clear_cache():
     db.session.commit()
     flash(f"Hotel cache cleared. Removed {count} cached entries.", "success")
     return redirect(url_for('admin_dashboard'))
+
+
+# --- AI CHATBOT ROUTE ---
+
+@app.route('/api/chat', methods=['POST'])
+def chat():
+    """
+    Endpoint for AI Travel Chatbot powered by Gemini.
+    Accepts JSON payload: { 'message': str, 'history': list }
+    Returns JSON: { 'success': bool, 'reply': str }
+    """
+    if not request.is_json:
+        return jsonify({'success': False, 'error': 'Request must be JSON.'}), 400
+
+    data = request.get_json() or {}
+    user_message = data.get('message', '').strip()
+    history = data.get('history', [])
+
+    if not user_message:
+        return jsonify({'success': False, 'error': 'Message cannot be empty.'}), 400
+
+    # Limit message length to 2000 chars for security & token control
+    if len(user_message) > 2000:
+        user_message = user_message[:2000]
+
+    try:
+        reply = ask_travel_gemini(user_message, history=history)
+        return jsonify({'success': True, 'reply': reply})
+    except Exception as e:
+        app.logger.error(f"Chatbot error: {str(e)}", exc_info=True)
+        return jsonify({
+            'success': False, 
+            'error': 'An error occurred while communicating with the travel AI. Please try again later.'
+        }), 500
 
 
 # Error handlers
