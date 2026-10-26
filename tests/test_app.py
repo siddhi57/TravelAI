@@ -229,6 +229,38 @@ def test_gemini_wrapper_offline():
     assert "Itinerary" in reply or "Day" in reply or "TravelAI" in reply
 
 
+def test_chatbot_dynamic_itinerary_days():
+    """Test that chatbot generates the exact number of itinerary days requested."""
+    # 5 days
+    reply_5 = ask_travel_gemini("Suggest a 5-day itinerary for Paris")
+    assert reply_5.count("* **Day ") == 5
+    assert "* **Day 1:" in reply_5
+    assert "* **Day 5:" in reply_5
+    assert "* **Day 6:" not in reply_5
+    assert "Paris" in reply_5
+
+    # 7 days
+    reply_7 = ask_travel_gemini("7 days plan for Goa")
+    assert reply_7.count("* **Day ") == 7
+    assert "* **Day 7:" in reply_7
+    assert "* **Day 8:" not in reply_7
+    assert "Goa" in reply_7
+
+    # 4 days
+    reply_4 = ask_travel_gemini("give me a 4-day trip plan for Manali")
+    assert reply_4.count("* **Day ") == 4
+    assert "* **Day 4:" in reply_4
+    assert "* **Day 5:" not in reply_4
+    assert "Manali" in reply_4
+
+    # 1 day
+    reply_1 = ask_travel_gemini("1 day itinerary for Jaipur")
+    assert reply_1.count("* **Day ") == 1
+    assert "* **Day 1:" in reply_1
+    assert "* **Day 2:" not in reply_1
+    assert "Jaipur" in reply_1
+
+
 def test_api_chat_endpoint_valid(client):
     """Test /api/chat endpoint with valid JSON prompt."""
     res = client.post('/api/chat', json={
