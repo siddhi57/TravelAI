@@ -17,9 +17,9 @@
                         <input type="text" name="destination" class="form-control" value="{{ destination }}" placeholder="Enter destination..." required>
                         <select name="budget" class="form-select" style="max-width: 140px;">
                             <option value="Any" {% if budget_filter == 'Any' %}selected{% endif %}>All Budgets</option>
-                            <option value="Budget" {% if budget_filter == 'Budget' %}selected{% endif %}>Budget ($)</option>
-                            <option value="Moderate" {% if budget_filter == 'Moderate' %}selected{% endif %}>Moderate ($$)</option>
-                            <option value="Luxury" {% if budget_filter == 'Luxury' %}selected{% endif %}>Luxury ($$$)</option>
+                            <option value="Budget" {% if budget_filter == 'Budget' %}selected{% endif %}>Budget</option>
+                            <option value="Moderate" {% if budget_filter == 'Moderate' %}selected{% endif %}>Moderate</option>
+                            <option value="Luxury" {% if budget_filter == 'Luxury' %}selected{% endif %}>Luxury</option>
                         </select>
                         <button type="submit" class="btn btn-success px-4 fw-bold">Search</button>
                     </form>

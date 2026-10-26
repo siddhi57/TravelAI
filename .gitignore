@@ -8,7 +8,7 @@
 # Python Byte-code & Cache
 __pycache__/
 *.py[cod]
-*$py.class
+*.class
 .pytest_cache/
 
 # User Uploads (keep directory, ignore uploaded user files except default avatar)

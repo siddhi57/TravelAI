@@ -81,9 +81,9 @@ class DestinationForm(FlaskForm):
         ('Wildlife', 'Wildlife & Jungle')
     ], validators=[DataRequired()])
     budget_level = SelectField('Budget Level', choices=[
-        ('Budget', 'Budget ($)'),
-        ('Moderate', 'Moderate ($$)'),
-        ('Luxury', 'Luxury ($$$)')
+        ('Budget', 'Budget'),
+        ('Moderate', 'Moderate'),
+        ('Luxury', 'Luxury')
     ], validators=[DataRequired()])
     description = TextAreaField('Description', validators=[DataRequired(), Length(min=10, max=1000)])
     tags = StringField('Tags (space-separated)', validators=[Length(max=255)])
@@ -93,9 +93,9 @@ class DestinationForm(FlaskForm):
 class RecommendationForm(FlaskForm):
     budget_level = SelectField('Budget Tier', choices=[
         ('Any', 'Any Budget Tier'),
-        ('Budget', 'Budget Friendly ($)'),
-        ('Moderate', 'Moderate ($$)'),
-        ('Luxury', 'Luxury ($$$)')
+        ('Budget', 'Budget Friendly'),
+        ('Moderate', 'Moderate'),
+        ('Luxury', 'Luxury')
     ], default='Any')
 
     category = SelectField('Travel Category', choices=[
@@ -145,8 +145,8 @@ class ItineraryForm(FlaskForm):
     destination = StringField('Destination Name', validators=[DataRequired(), Length(max=120)])
     days = IntegerField('Number of Days (1 - 7)', validators=[DataRequired(), NumberRange(min=1, max=7)], default=3)
     budget = SelectField('Budget Level', choices=[
-        ('Budget', 'Budget ($)'),
-        ('Moderate', 'Moderate ($$)'),
-        ('Luxury', 'Luxury ($$$)')
+        ('Budget', 'Budget'),
+        ('Moderate', 'Moderate'),
+        ('Luxury', 'Luxury')
     ], default='Moderate')
     submit = SubmitField('Generate AI Itinerary')

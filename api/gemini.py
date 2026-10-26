@@ -21,44 +21,68 @@ TRAVEL_SYSTEM_INSTRUCTION = (
     "4. If a user asks about non-travel topics, answer briefly or politely pivot back to travel and vacation planning.\n"
     "5. Remind users of TravelAI features when relevant (AI Recommender, Hotels Finder, Live Weather, Attractions Map, Itinerary Planner)."
 )
-
 def _is_503_error(e):
     """Detect whether an exception or error represents an HTTP 503 / UNAVAILABLE response."""
     code = getattr(e, 'code', None) or getattr(e, 'status_code', None)
     if code == 503:
         return True
+
     err_msg = str(e).lower()
-    return '503' in err_msg or 'unavailable' in err_msg or 'high demand' in err_msg or 'overloaded' in err_msg
+    return (
+        '503' in err_msg or
+        'unavailable' in err_msg or
+        'service unavailable' in err_msg or
+        'high demand' in err_msg
+    )
+
+
+TRAVEL_SYSTEM_INSTRUCTION = """
+You are TravelAI, an advanced AI travel assistant.
+
+Your responsibilities:
+
+- Answer all travel-related questions.
+- Create travel itineraries for exactly the number of days requested.
+- If the user asks for 7 days, generate 7 days.
+- If the user asks for 10 days, generate 10 days.
+- If the user asks for 15 days, generate 15 days.
+- Recommend attractions, hotels, restaurants, transport options, budgets, and local experiences.
+- Suggest destinations based on interests and budget.
+- Provide packing recommendations.
+- Answer questions about weather, seasons, transportation, sightseeing, and travel planning.
+- Format itineraries clearly using Day 1, Day 2, Day 3, etc.
+- Continue until all requested days are covered.
+- Never default to a 3-day itinerary unless the user explicitly asks for 3 days.
+
+Example itinerary format:
+
+Day 1
+Morning:
+Afternoon:
+Evening:
+
+Day 2
+Morning:
+Afternoon:
+Evening:
+
+Provide detailed, realistic, and useful travel guidance.
+"""
+
 
 def _build_contents_from_history(message, history=None):
-    """
-    Normalizes rolling chat history into the Gemini format.
-    Accepts history as a list of dicts: [{'role': 'user'|'model'|'assistant', 'text': '...'}]
-    """
     contents = []
-    if history and isinstance(history, list):
-        # Limit to the last 10 turns to avoid excessive token consumption
-        for item in history[-10:]:
-            role = item.get('role', 'user')
-            # Normalize 'assistant' or 'bot' to 'model' for Gemini
-            if role in ('assistant', 'bot'):
-                role = 'model'
-            elif role != 'model':
-                role = 'user'
-            text = item.get('text', '').strip()
-            if text:
-                contents.append({
-                    'role': role,
-                    'parts': [{'text': text}]
-                })
-                
-    # Append the current prompt
-    contents.append({
-        'role': 'user',
-        'parts': [{'text': message.strip()}]
-    })
-    return contents
 
+    if history:
+        for item in history:
+            contents.append(item)
+
+    contents.append({
+        "role": "user",
+        "parts": [{"text": message.strip()}]
+    })
+
+    return contents
 def _ask_via_google_genai_sdk(api_key, model_name, message, history=None):
     """Attempt request using the modern google-genai SDK."""
     """Attempt request using the modern google-genai SDK with exponential backoff on 503."""
@@ -74,13 +98,6 @@ def _ask_via_google_genai_sdk(api_key, model_name, message, history=None):
         max_output_tokens=1500
     )
     
-    response = client.models.generate_content(
-        model=model_name,
-        contents=contents,
-        config=config
-    )
-    if response and response.text:
-        return response.text
     for attempt in range(len(RETRY_DELAYS) + 1):
         try:
             response = client.models.generate_content(
@@ -117,16 +134,6 @@ def _ask_via_rest_api(api_key, model_name, message, history=None):
         }
     }
     
-    resp = requests.post(url, json=payload, headers={"Content-Type": "application/json"}, timeout=15)
-    if resp.status_code == 200:
-        data = resp.json()
-        candidates = data.get("candidates", [])
-        if candidates:
-            parts = candidates[0].get("content", {}).get("parts", [])
-            if parts and "text" in parts[0]:
-                return parts[0]["text"]
-    else:
-        logger.warning(f"Gemini REST error {resp.status_code}: {resp.text}")
     for attempt in range(len(RETRY_DELAYS) + 1):
         try:
             resp = requests.post(url, json=payload, headers={"Content-Type": "application/json"}, timeout=15)
@@ -218,7 +225,11 @@ def ask_travel_gemini(message, history=None):
     and returns a graceful travel assistant response if credentials are not configured.
     """
     api_key = Config.GEMINI_API_KEY or os.environ.get('GEMINI_API_KEY', '')
-    model_name = Config.GEMINI_MODEL or os.environ.get('GEMINI_MODEL', 'gemini-3.8-flash')
+    model_name = Config.GEMINI_MODEL or os.environ.get(
+    "GEMINI_MODEL",
+    "gemini-2.5-flash"
+)
+
     
     if not message or not message.strip():
         return "Please ask a question about your travel plans, destinations, or itineraries!"
@@ -244,4 +255,7 @@ def ask_travel_gemini(message, history=None):
         logger.error(f"Gemini REST invocation failed: {e}")
 
     # 3. Fallback on network timeout or unexpected error
-    return _generate_fallback_travel_reply(message)
+    return (
+    "TravelAI could not connect to Gemini. "
+    "Please verify your GEMINI_API_KEY and GEMINI_MODEL settings."
+)
