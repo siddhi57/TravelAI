@@ -46,8 +46,16 @@ class PasswordComplexityValidator:
 class RegistrationForm(FlaskForm):
     name = StringField('Full Name', validators=[DataRequired(), Length(min=2, max=100)])
     email = StringField('Email Address', validators=[DataRequired(), Email(), Length(max=120), UniqueEmailValidator()])
-    password = PasswordField('Password', validators=[DataRequired(), PasswordComplexityValidator(8), Length(max=50)])
-    confirm_password = PasswordField('Confirm Password', validators=[DataRequired(), EqualTo('password', message='Passwords must match')])
+    password = PasswordField('Password', validators=[
+        DataRequired(),
+        Length(min=8, max=50, message='Password must be at least 8 characters long.'),
+        PasswordComplexityValidator(8)
+    ])
+    confirm_password = PasswordField('Confirm Password', validators=[
+        DataRequired(),
+        Length(min=8, max=50, message='Password must be at least 8 characters long.'),
+        EqualTo('password', message='Passwords must match')
+    ])
     submit = SubmitField('Create Account')
 
 

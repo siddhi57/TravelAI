@@ -35,7 +35,8 @@
 
                         <div class="mb-3">
                             {{ form.password.label(class="form-label fw-semibold") }}
-                            {{ form.password(class="form-control" + (" is-invalid" if form.password.errors else ""), placeholder="At least 6 characters") }}
+                            {{ form.password(class="form-control" + (" is-invalid" if form.password.errors else ""), placeholder="At least 8 characters", minlength="8") }}
+                            <div class="form-text text-muted"><i class="bi bi-shield-lock me-1"></i>Password must be at least 8 characters long.</div>
                             {% for error in form.password.errors %}
                                 <div class="invalid-feedback">{{ error }}</div>
                             {% endfor %}
@@ -43,7 +44,7 @@
 
                         <div class="mb-3">
                             {{ form.confirm_password.label(class="form-label fw-semibold") }}
-                            {{ form.confirm_password(class="form-control" + (" is-invalid" if form.confirm_password.errors else ""), placeholder="Repeat password") }}
+                            {{ form.confirm_password(class="form-control" + (" is-invalid" if form.confirm_password.errors else ""), placeholder="Repeat password (min. 8 characters)", minlength="8") }}
                             {% for error in form.confirm_password.errors %}
                                 <div class="invalid-feedback">{{ error }}</div>
                             {% endfor %}
