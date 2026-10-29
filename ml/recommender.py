@@ -1,8 +1,65 @@
+import re
 import os
 import pandas as pd
 import numpy as np
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_similarity
+
+def map_budget_to_tiers(budget_input):
+    """
+    Maps user-facing budget ranges, numeric values, or tier names to matching dataset tiers ('Budget', 'Moderate', 'Luxury').
+    Returns a list of matching lower-case tier strings, or None if matching all.
+    """
+    if not budget_input:
+        return None
+    b = str(budget_input).strip().lower()
+    if b in ('any', 'all', '', 'none'):
+        return None
+    
+    # Direct legacy matches
+    if b == 'budget':
+        return ['budget']
+    if b == 'moderate':
+        return ['moderate']
+    if b == 'luxury':
+        return ['luxury']
+        
+    # Extract numbers from range string (e.g. '2,500 - 6,000' -> [2500, 6000])
+    raw_nums = re.findall(r'\d[\d,]*', b)
+    numbers = []
+    for n in raw_nums:
+        clean_n = n.replace(',', '')
+        if clean_n.isdigit():
+            numbers.append(int(clean_n))
+            
+    if numbers:
+        min_n = min(numbers)
+        max_n = max(numbers)
+        if max_n < 3500 or ('under' in b and min_n <= 3500):
+            return ['budget']
+        elif min_n < 5000 and max_n <= 8000:
+            return ['budget', 'moderate']
+        elif min_n >= 5000 and max_n <= 15000:
+            return ['moderate']
+        elif min_n >= 10000 and max_n > 15000 and min_n <= 20000:
+            return ['moderate', 'luxury']
+        elif min_n > 20000 or 'above' in b:
+            return ['luxury']
+            
+    # Textual tier keywords
+    if 'under' in b or 'backpacker' in b or 'low' in b:
+        return ['budget']
+    if 'economy' in b or 'affordable' in b:
+        return ['budget', 'moderate']
+    if 'mid' in b or 'standard' in b or 'moderate' in b:
+        return ['moderate']
+    if 'premium' in b or 'upscale' in b:
+        return ['moderate', 'luxury']
+    if 'above' in b or 'luxury' in b or 'elite' in b:
+        return ['luxury']
+
+    return [b]
+
 
 class DestinationRecommender:
     def __init__(self, csv_path=None):
@@ -77,14 +134,15 @@ class DestinationRecommender:
         # Calculate Cosine Similarity against all destinations
         cosine_sim = cosine_similarity(query_vector, self.tfidf_matrix).flatten()
 
-        # Filter dataset by budget_level if specified
+        # Filter dataset by budget_level or budget range if specified
         filtered_indices = list(range(len(self.df)))
         if budget_level and budget_level.strip().lower() != 'any':
-            budget_str = budget_level.strip().lower()
-            filtered_indices = [
-                idx for idx, row in self.df.iterrows()
-                if row['budget_level'].lower() == budget_str
-            ]
+            target_tiers = map_budget_to_tiers(budget_level)
+            if target_tiers:
+                filtered_indices = [
+                    idx for idx, row in self.df.iterrows()
+                    if row['budget_level'].strip().lower() in target_tiers
+                ]
             # If no matches after budget filtering, fall back to all indices
             if not filtered_indices:
                 filtered_indices = list(range(len(self.df)))

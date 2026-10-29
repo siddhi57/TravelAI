@@ -120,7 +120,15 @@
                 <div class="card-body d-flex flex-column">
                     <div class="d-flex justify-content-between align-items-start mb-2">
                         <span class="badge-category">{{ dest.category }}</span>
-                        <span class="badge-budget">{{ dest.budget_level }}</span>
+                        {% if dest.budget_level == 'Budget' %}
+                            <span class="badge-budget">Budget (&lt; ₹5,000/day)</span>
+                        {% elif dest.budget_level == 'Moderate' %}
+                            <span class="badge-budget">Moderate (₹5,000 - ₹15,000/day)</span>
+                        {% elif dest.budget_level == 'Luxury' %}
+                            <span class="badge-budget">Luxury (₹15,000+/day)</span>
+                        {% else %}
+                            <span class="badge-budget">{{ dest.budget_level }}</span>
+                        {% endif %}
                     </div>
                     <h4 class="card-title fw-bold mb-1">{{ dest.name }}</h4>
                     <p class="text-muted small mb-2"><i class="bi bi-geo-alt me-1"></i>{{ dest.state }}</p>

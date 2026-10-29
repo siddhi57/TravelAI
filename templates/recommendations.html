@@ -24,6 +24,7 @@
                         <div class="mb-3">
                             {{ form.budget_level.label(class="form-label fw-semibold") }}
                             {{ form.budget_level(class="form-select") }}
+                            <div class="form-text text-muted small"><i class="bi bi-wallet2 me-1"></i>Select your preferred daily spend range.</div>
                         </div>
 
                         <div class="mb-3">
@@ -66,7 +67,15 @@
                                     <div class="d-flex justify-content-between align-items-start mb-2">
                                         <div>
                                             <span class="badge-category me-2">{{ item.category }}</span>
-                                            <span class="badge-budget me-2">{{ item.budget_level }}</span>
+                                            {% if item.budget_level == 'Budget' %}
+                                                <span class="badge-budget me-2">Budget (&lt; ₹5,000/day)</span>
+                                            {% elif item.budget_level == 'Moderate' %}
+                                                <span class="badge-budget me-2">Moderate (₹5,000 - ₹15,000/day)</span>
+                                            {% elif item.budget_level == 'Luxury' %}
+                                                <span class="badge-budget me-2">Luxury (₹15,000+/day)</span>
+                                            {% else %}
+                                                <span class="badge-budget me-2">{{ item.budget_level }}</span>
+                                            {% endif %}
                                             <span class="badge bg-secondary bg-opacity-10 text-dark"><i class="bi bi-geo-alt me-1"></i>{{ item.state }}</span>
                                         </div>
                                         <div class="text-end">

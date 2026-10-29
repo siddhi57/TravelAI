@@ -46,7 +46,7 @@ def test_haversine_distance():
     assert 330 < dist < 360
 
 def test_ml_recommender():
-    """Test TF-IDF recommender engine standalone."""
+    """Test TF-IDF recommender engine standalone with legacy and budget ranges."""
     recommender = DestinationRecommender()
     results = recommender.recommend(
         budget_level='Moderate',
@@ -56,6 +56,16 @@ def test_ml_recommender():
     )
     assert len(results) > 0
     assert 'name' in results[0]
+
+    # Test budget range matching
+    results_range = recommender.recommend(
+        budget_level='6,000 - 15,000',
+        category='Beach',
+        interests=['beach'],
+        top_n=5
+    )
+    assert len(results_range) > 0
+    assert 'name' in results_range[0]
 
 def test_weather_api_wrapper():
     """Test OpenWeatherMap wrapper fallback & structure."""
@@ -401,11 +411,11 @@ def test_itinerary_generation_and_editable_interface(client):
     assert res.status_code == 200
     assert b'AI Day-by-Day Itinerary Generator' in res.data
     
-    # POST to generate a 3-day itinerary
+    # POST to generate a 3-day itinerary with custom budget range
     res = client.post('/itinerary', data={
         'destination': 'Jaipur',
         'days': 3,
-        'budget': 'Moderate'
+        'budget': '6,000 - 15,000'
     }, follow_redirects=True)
     assert res.status_code == 200
     assert b'3-Day Plan for Jaipur' in res.data

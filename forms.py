@@ -95,10 +95,10 @@ class DestinationForm(FlaskForm):
         ('Desert', 'Desert Safari'),
         ('Wildlife', 'Wildlife & Jungle')
     ], validators=[DataRequired()])
-    budget_level = SelectField('Budget Level', choices=[
-        ('Budget', 'Budget'),
-        ('Moderate', 'Moderate'),
-        ('Luxury', 'Luxury')
+    budget_level = SelectField('Budget Category & Range', choices=[
+        ('Budget', 'Budget (Under ₹5,000 / day)'),
+        ('Moderate', 'Moderate (₹5,000 - ₹15,000 / day)'),
+        ('Luxury', 'Luxury (Above ₹15,000 / day)')
     ], validators=[DataRequired()])
     description = TextAreaField('Description', validators=[DataRequired(), Length(min=10, max=1000)])
     tags = StringField('Tags (space-separated)', validators=[Length(max=255)])
@@ -106,11 +106,16 @@ class DestinationForm(FlaskForm):
 
 
 class RecommendationForm(FlaskForm):
-    budget_level = SelectField('Budget Tier', choices=[
-        ('Any', 'Any Budget Tier'),
-        ('Budget', 'Budget Friendly'),
-        ('Moderate', 'Moderate'),
-        ('Luxury', 'Luxury')
+    budget_level = SelectField('Budget Range', choices=[
+        ('Any', 'Any Budget Range'),
+        ('Under 2,500', 'Under ₹2,500 / day (Backpacker / Low Budget)'),
+        ('2,500 - 6,000', '₹2,500 - ₹6,000 / day (Economy / Budget)'),
+        ('6,000 - 15,000', '₹6,000 - ₹15,000 / day (Standard / Moderate)'),
+        ('15,000 - 30,000', '₹15,000 - ₹30,000 / day (Premium / Upscale)'),
+        ('Above 30,000', 'Above ₹30,000 / day (Luxury / Elite)'),
+        ('Budget', 'Budget (Under ₹5,000 / day)'),
+        ('Moderate', 'Moderate (₹5,000 - ₹15,000 / day)'),
+        ('Luxury', 'Luxury (Above ₹15,000 / day)')
     ], default='Any')
 
     category = SelectField('Travel Category', choices=[
@@ -159,9 +164,14 @@ class CommentForm(FlaskForm):
 class ItineraryForm(FlaskForm):
     destination = StringField('Destination Name', validators=[DataRequired(), Length(max=120)])
     days = IntegerField('Number of Days (1 - 7)', validators=[DataRequired(), NumberRange(min=1, max=7)], default=3)
-    budget = SelectField('Budget Level', choices=[
-        ('Budget', 'Budget'),
-        ('Moderate', 'Moderate'),
-        ('Luxury', 'Luxury')
-    ], default='Moderate')
+    budget = SelectField('Expected Daily Budget Range', choices=[
+        ('6,000 - 15,000', '₹6,000 - ₹15,000 / day (Standard / Moderate)'),
+        ('Under 2,500', 'Under ₹2,500 / day (Backpacker / Low Budget)'),
+        ('2,500 - 6,000', '₹2,500 - ₹6,000 / day (Economy / Budget)'),
+        ('15,000 - 30,000', '₹15,000 - ₹30,000 / day (Premium / Upscale)'),
+        ('Above 30,000', 'Above ₹30,000 / day (Luxury / Elite)'),
+        ('Budget', 'Budget (Under ₹5,000 / day)'),
+        ('Moderate', 'Moderate (₹5,000 - ₹15,000 / day)'),
+        ('Luxury', 'Luxury (Above ₹15,000 / day)')
+    ], default='6,000 - 15,000')
     submit = SubmitField('Generate AI Itinerary')

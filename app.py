@@ -9,7 +9,7 @@ from werkzeug.utils import secure_filename
 from config import Config
 from models import db, User, Destination, HotelsCache, Post, Like, Comment
 from forms import RegistrationForm, LoginForm, ProfileForm, DestinationForm, RecommendationForm, PostForm, CommentForm, ItineraryForm, sanitize_html
-from ml.recommender import recommender_engine
+from ml.recommender import recommender_engine, map_budget_to_tiers
 from api.weather import get_current_weather, get_weather_forecast
 from api.geoapify import geocode_location, get_nearby_hotels, get_nearby_attractions
 from api.gemini import ask_travel_gemini
@@ -262,9 +262,14 @@ def hotels():
             cached_hotels = []
 
     if budget_filter and budget_filter != 'Any':
-        filtered = [h for h in cached_hotels if str(h.get('price_tier')).lower() == budget_filter.lower()]
-        if filtered:
-            cached_hotels = filtered
+        target_tiers = map_budget_to_tiers(budget_filter)
+        if target_tiers:
+            filtered = [
+                h for h in cached_hotels 
+                if any(t in str(h.get('price_tier', '')).lower() for t in target_tiers)
+            ]
+            if filtered:
+                cached_hotels = filtered
             
     cached_hotels.sort(key=lambda x: x.get('rating', 0), reverse=True)
     
