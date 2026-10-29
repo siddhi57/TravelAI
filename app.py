@@ -252,6 +252,7 @@ def hotels():
                         price_tier=h.get('price_tier'),
                         lat=h.get('lat'),
                         lng=h.get('lng'),
+                        website=h.get('website'),
                         fetched_at=datetime.utcnow()
                     )
                     db.session.add(cache_item)

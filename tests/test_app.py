@@ -83,6 +83,8 @@ def test_geoapify_wrapper():
     
     hotels = get_nearby_hotels('Goa', limit=5)
     assert len(hotels) > 0
+    assert 'website' in hotels[0]
+    assert hotels[0]['website'].startswith('http')
     
     attractions = get_nearby_attractions('Goa', limit=5)
     assert len(attractions) > 0
@@ -99,6 +101,7 @@ def test_routes_public(client):
     
     res = client.get('/hotels?destination=Goa')
     assert res.status_code == 200
+    assert b'Hotel Website' in res.data
     
     res = client.get('/weather?destination=Goa')
     assert res.status_code == 200

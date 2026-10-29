@@ -68,9 +68,18 @@
 
                                 <div class="d-flex justify-content-between align-items-center pt-2 border-top">
                                     <span class="badge-budget">{{ h.price_tier if h.price_tier else 'Moderate' }}</span>
-                                    <button class="btn btn-sm btn-outline-success" onclick="focusHotelMarker({{ h.lat }}, {{ h.lng }}, '{{ h.hotel_name }}')">
-                                        <i class="bi bi-geo-fill me-1"></i>View on Map
-                                    </button>
+                                    <div class="d-flex gap-2">
+                                        <a href="{{ h.website if h.website else 'https://www.google.com/search?q=' + (h.hotel_name + ' ' + destination + ' hotel website')|urlencode }}" 
+                                           target="_blank" 
+                                           rel="noopener noreferrer" 
+                                           class="btn btn-sm btn-outline-primary"
+                                           title="Visit hotel website or booking page">
+                                            <i class="bi bi-box-arrow-up-right me-1"></i>Hotel Website
+                                        </a>
+                                        <button class="btn btn-sm btn-outline-success" onclick="focusHotelMarker({{ h.lat }}, {{ h.lng }}, '{{ h.hotel_name }}')">
+                                            <i class="bi bi-geo-fill me-1"></i>View on Map
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -100,7 +109,7 @@
                 lat: {{ h.lat if h.lat else coords.lat }},
                 lng: {{ h.lng if h.lng else coords.lng }},
                 title: "{{ h.hotel_name|replace('"', '\\"') }}",
-                description: "Rating: {{ h.rating if h.rating else '4.5' }} | {{ h.address|replace('"', '\\"') }}",
+                description: "Rating: {{ h.rating if h.rating else '4.5' }} | {{ h.address|replace('"', '\\"') }}<br/><a href='{{ h.website if h.website else '#' }}' target='_blank' rel='noopener noreferrer' class='btn btn-sm btn-primary mt-1 text-white py-0 px-2'>Hotel Website</a>",
                 category: "Hotel"
             }{% if not loop.last %},{% endif %}
             {% endfor %}

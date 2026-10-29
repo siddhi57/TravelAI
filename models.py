@@ -68,9 +68,14 @@ class HotelsCache(db.Model):
     price_tier = db.Column(db.String(50), nullable=True)
     lat = db.Column(db.Float, nullable=True)
     lng = db.Column(db.Float, nullable=True)
+    website = db.Column(db.String(255), nullable=True)
     fetched_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     def to_dict(self):
+        web = self.website
+        if not web:
+            dest_name = self.destination.name if self.destination else ""
+            web = f"https://www.google.com/search?q={self.hotel_name.replace(' ', '+')}+{dest_name.replace(' ', '+')}+hotel+website"
         return {
             'id': self.id,
             'destination_id': self.destination_id,
@@ -80,6 +85,7 @@ class HotelsCache(db.Model):
             'price_tier': self.price_tier,
             'lat': self.lat,
             'lng': self.lng,
+            'website': web,
             'fetched_at': self.fetched_at.strftime('%Y-%m-%d %H:%M') if self.fetched_at else ''
         }
 

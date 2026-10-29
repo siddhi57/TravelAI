@@ -1,3 +1,4 @@
+import urllib.parse
 import os
 import requests
 import random
@@ -135,6 +136,10 @@ def get_nearby_hotels(location_name, budget_tier='Moderate', radius_meters=10000
                     h_rating = round(random.uniform(4.0, 4.9), 1)
                     h_price = props.get('price_level') or budget_tier
                     
+                    h_website = props.get('website') or props.get('contact', {}).get('website')
+                    if not h_website:
+                        h_website = f"https://www.google.com/search?q={urllib.parse.quote_plus(h_name + ' ' + location_name + ' hotel website booking')}"
+
                     hotels.append({
                         'hotel_name': h_name,
                         'address': h_address,
@@ -142,6 +147,7 @@ def get_nearby_hotels(location_name, budget_tier='Moderate', radius_meters=10000
                         'price_tier': h_price,
                         'lat': h_lat,
                         'lng': h_lng,
+                        'website': h_website,
                         'is_fallback': False
                     })
                 if hotels:
@@ -161,6 +167,7 @@ def get_nearby_hotels(location_name, budget_tier='Moderate', radius_meters=10000
         h_address = f"{101 + i * 12} Main Boulevard, {location_name.title()}"
         h_rating = round(4.2 + (i % 7) * 0.1, 1)
         h_price = budget_tier if budget_tier else ('Budget' if i % 2 == 0 else 'Luxury')
+        h_website = f"https://www.google.com/search?q={urllib.parse.quote_plus(h_name + ' ' + location_name + ' hotel official website booking')}"
         
         fallback_hotels.append({
             'hotel_name': h_name,
@@ -169,6 +176,7 @@ def get_nearby_hotels(location_name, budget_tier='Moderate', radius_meters=10000
             'price_tier': h_price,
             'lat': h_lat,
             'lng': h_lng,
+            'website': h_website,
             'is_fallback': True
         })
         
