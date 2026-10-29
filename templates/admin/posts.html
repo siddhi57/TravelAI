@@ -18,10 +18,11 @@
                 <thead class="table-light">
                     <tr>
                         <th>ID</th>
+                        <th>Photo</th>
                         <th>Author</th>
                         <th>Location Tag</th>
                         <th>Caption Content</th>
-                        <th>Likes / Comments</th>
+                        <th>Engagement</th>
                         <th>Posted Date</th>
                         <th>Actions</th>
                     </tr>
@@ -30,36 +31,110 @@
                     {% for p in posts %}
                     <tr>
                         <td><small class="text-muted">#{{ p.id }}</small></td>
+                        <td>
+                            {% if p.image_path %}
+                                <div class="position-relative d-inline-block">
+                                    <img src="{{ url_for('static', filename='uploads/' + p.image_path) }}" 
+                                         class="rounded shadow-sm border" 
+                                         style="width: 70px; height: 70px; object-fit: cover; cursor: pointer;" 
+                                         alt="Uploaded photo" 
+                                         data-bs-toggle="modal" 
+                                         data-bs-target="#photoModal{{ p.id }}"
+                                         title="Click to inspect photo">
+                                    <button type="button" 
+                                            class="btn btn-sm btn-dark position-absolute bottom-0 end-0 p-0 px-1 m-1 opacity-75" 
+                                            style="font-size: 0.65rem;" 
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#photoModal{{ p.id }}"
+                                            title="Enlarge Photo">
+                                        <i class="bi bi-zoom-in"></i>
+                                    </button>
+                                </div>
+                            {% else %}
+                                <span class="badge bg-light text-muted border px-2 py-2">
+                                    <i class="bi bi-file-text me-1"></i>No Image
+                                </span>
+                            {% endif %}
+                        </td>
                         <td><strong class="text-dark">{{ p.author.name if p.author else 'Traveler' }}</strong></td>
                         <td>
                             {% if p.location_name %}
-                                <span class="badge bg-danger bg-opacity-10 text-danger">{{ p.location_name }}</span>
+                                <span class="badge bg-danger bg-opacity-10 text-danger"><i class="bi bi-geo-alt me-1"></i>{{ p.location_name }}</span>
                             {% else %}
                                 <span class="text-muted small">None</span>
                             {% endif %}
                         </td>
                         <td>
-                            <p class="mb-0 text-dark small" style="max-width: 300px;">{{ p.caption }}</p>
-                            {% if p.image_path %}
-                                <small class="text-info d-block mt-1"><i class="bi bi-image me-1"></i>Has Attached Photo</small>
-                            {% endif %}
+                            <p class="mb-0 text-dark small" style="max-width: 250px;">{{ p.caption }}</p>
                         </td>
                         <td>
-                            <span class="small me-2"><i class="bi bi-heart text-danger me-1"></i>{{ p.likes|length }}</span>
-                            <span class="small"><i class="bi bi-chat-left-text text-secondary me-1"></i>{{ p.comments|length }}</span>
+                            <span class="small me-2"><i class="bi bi-heart-fill text-danger me-1"></i>{{ p.likes|length }}</span>
+                            <span class="small"><i class="bi bi-chat-left-text-fill text-secondary me-1"></i>{{ p.comments|length }}</span>
                         </td>
                         <td><small class="text-muted">{{ p.created_at.strftime('%b %d, %Y %H:%M') }}</small></td>
                         <td>
-                            <form method="POST" action="{{ url_for('admin_delete_post', post_id=p.id) }}" class="d-inline" onsubmit="return confirm('Remove post #{{ p.id }}?');">
-                                <button type="submit" class="btn btn-sm btn-outline-danger me-1">Delete Post</button>
-                            </form>
+                            <div class="d-flex flex-column gap-1">
+                                {% if p.image_path %}
+                                    <button type="button" class="btn btn-sm btn-outline-info" data-bs-toggle="modal" data-bs-target="#photoModal{{ p.id }}">
+                                        <i class="bi bi-eye me-1"></i>Inspect
+                                    </button>
+                                {% endif %}
+                                <form method="POST" action="{{ url_for('admin_delete_post', post_id=p.id) }}" class="d-inline" onsubmit="return confirm('Remove post #{{ p.id }}?');">
+                                    <button type="submit" class="btn btn-sm btn-outline-danger w-100">
+                                        <i class="bi bi-trash me-1"></i>Delete
+                                    </button>
+                                </form>
+                            </div>
                         </td>
                     </tr>
+
+                    {% if p.image_path %}
+                    <!-- Photo Inspection Modal for Post #{{ p.id }} -->
+                    <div class="modal fade" id="photoModal{{ p.id }}" tabindex="-1" aria-labelledby="photoModalLabel{{ p.id }}" aria-hidden="true">
+                        <div class="modal-dialog modal-dialog-centered modal-lg">
+                            <div class="modal-content shadow border-0">
+                                <div class="modal-header bg-light">
+                                    <h5 class="modal-title fw-bold" id="photoModalLabel{{ p.id }}">
+                                        <i class="bi bi-shield-check text-danger me-2"></i>Photo Moderation &mdash; Post #{{ p.id }}
+                                    </h5>
+                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                </div>
+                                <div class="modal-body text-center p-3 bg-dark bg-opacity-10">
+                                    <img src="{{ url_for('static', filename='uploads/' + p.image_path) }}" 
+                                         class="img-fluid rounded shadow" 
+                                         style="max-height: 520px; object-fit: contain;" 
+                                         alt="Uploaded photo for moderation">
+                                </div>
+                                <div class="modal-footer d-flex justify-content-between align-items-center">
+                                    <div class="text-start" style="max-width: 60%;">
+                                        <p class="mb-1 fw-bold text-dark">
+                                            <i class="bi bi-person me-1"></i>{{ p.author.name if p.author else 'Traveler' }}
+                                            {% if p.location_name %}
+                                                <span class="badge bg-danger bg-opacity-10 text-danger ms-2"><i class="bi bi-geo-alt me-1"></i>{{ p.location_name }}</span>
+                                            {% endif %}
+                                        </p>
+                                        <small class="text-secondary d-block">{{ p.caption }}</small>
+                                    </div>
+                                    <div class="d-flex gap-2">
+                                        <a href="{{ url_for('static', filename='uploads/' + p.image_path) }}" target="_blank" class="btn btn-sm btn-outline-secondary">
+                                            <i class="bi bi-box-arrow-up-right me-1"></i>Original Size
+                                        </a>
+                                        <form method="POST" action="{{ url_for('admin_delete_post', post_id=p.id) }}" class="d-inline" onsubmit="return confirm('Delete this post and its image immediately?');">
+                                            <button type="submit" class="btn btn-sm btn-danger fw-bold">
+                                                <i class="bi bi-trash me-1"></i>Delete Inappropriate Post
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% endif %}
 
                     <!-- Expandable Comments Moderation Row -->
                     {% if p.comments %}
                     <tr class="bg-light">
-                        <td colspan="7" class="p-3">
+                        <td colspan="8" class="p-3">
                             <h6 class="fw-bold small text-muted mb-2"><i class="bi bi-chat-left-dots me-1"></i>Comments on Post #{{ p.id }}</h6>
                             <div class="d-flex flex-column gap-2">
                                 {% for c in p.comments %}

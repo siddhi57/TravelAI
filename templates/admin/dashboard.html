@@ -146,7 +146,7 @@
                             <thead class="table-light">
                                 <tr>
                                     <th>Author</th>
-                                    <th>Caption Snippet</th>
+                                    <th>Post / Photo</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
@@ -154,7 +154,17 @@
                                 {% for p in recent_posts %}
                                 <tr>
                                     <td><small class="fw-bold text-dark">{{ p.author.name if p.author else 'Traveler' }}</small></td>
-                                    <td><small class="text-secondary">{{ p.caption[:45] }}...</small></td>
+                                    <td>
+                                        <div class="d-flex align-items-center gap-2">
+                                            {% if p.image_path %}
+                                                <img src="{{ url_for('static', filename='uploads/' + p.image_path) }}" 
+                                                     class="rounded border flex-shrink-0" 
+                                                     style="width: 38px; height: 38px; object-fit: cover;" 
+                                                     alt="Thumbnail">
+                                            {% endif %}
+                                            <small class="text-secondary">{{ p.caption[:45] }}...</small>
+                                        </div>
+                                    </td>
                                     <td>
                                         <form method="POST" action="{{ url_for('admin_delete_post', post_id=p.id) }}" class="d-inline" onsubmit="return confirm('Delete this post?');">
                                             <button type="submit" class="btn btn-sm btn-outline-danger py-0 px-2">Delete</button>

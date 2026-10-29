@@ -190,6 +190,35 @@ def test_admin_dashboard_and_management(client):
     assert b'Admin privileges granted' in res.data
 
 
+def test_admin_photo_moderation(client):
+    """Test admin can view uploaded post photos in the moderation queue."""
+    with app.app_context():
+        admin = User(name='Admin Mod', email='adminmod@example.com', is_admin=True)
+        admin.set_password('AdminPass123!')
+        db.session.add(admin)
+        db.session.commit()
+        
+        post = Post(
+            user_id=admin.id,
+            caption="Check out this view!",
+            image_path="test_moderation_photo.jpg",
+            location_name="Goa"
+        )
+        db.session.add(post)
+        db.session.commit()
+        post_id = post.id
+
+    # Log in as admin
+    client.post('/login', data={'email': 'adminmod@example.com', 'password': 'AdminPass123!'})
+
+    # Access moderation queue
+    res = client.get('/admin/posts')
+    assert res.status_code == 200
+    assert b'test_moderation_photo.jpg' in res.data
+    assert f'photoModal{post_id}'.encode() in res.data
+    assert b'Photo Moderation' in res.data
+
+
 def test_community_post_deletion(client):
     """Test user can delete their own post, but unauthorized user cannot."""
     # Register Author
