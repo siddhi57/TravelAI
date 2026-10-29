@@ -416,5 +416,6 @@ def test_itinerary_generation_and_editable_interface(client):
     assert b'editActivityModal' in res.data
     assert b'addActivityModal' in res.data
     assert b'Add Day' in res.data
-    assert b'Export Text' in res.data
+    assert b'Export Text' not in res.data
+    assert b'Print / PDF' not in res.data
 

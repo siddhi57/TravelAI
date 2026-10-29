@@ -110,13 +110,7 @@
                             </div>
                             <p class="small text-muted mb-0"><i class="bi bi-geo me-1"></i>Sorted using Haversine geodesic proximity from center. Fully editable below.</p>
                         </div>
-                        <div class="d-flex flex-wrap gap-2">
-                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window.print()" title="Print or save as PDF">
-                                <i class="bi bi-printer me-1"></i>Print / PDF
-                            </button>
-                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="exportItineraryText()" title="Copy formatted itinerary to clipboard">
-                                <i class="bi bi-clipboard-check me-1"></i>Export Text
-                            </button>
+                        <div>
                             <a href="{{ url_for('hotels', destination=destination) }}" class="btn btn-sm btn-success">
                                 <i class="bi bi-building me-1"></i>Book Hotels
                             </a>
@@ -618,34 +612,7 @@
         renderItinerary();
     }
 
-    // Export formatted itinerary to clipboard
-    function exportItineraryText() {
-        let text = `=== TravelAI Companion Itinerary: ${currentDestination} ===\n`;
-        text += `Total Duration: ${activeItinerary.length} Days\n\n`;
 
-        activeItinerary.forEach((day, idx) => {
-            text += `--- Day ${day.day_number || (idx + 1)} ---\n`;
-            if (day.activities && day.activities.length > 0) {
-                day.activities.forEach(act => {
-                    text += `* [${act.slot}] ${act.title} (${act.category || 'Sightseeing'})\n`;
-                    if (act.address) text += `  Location/Notes: ${act.address}\n`;
-                });
-            } else {
-                text += `  (No activities scheduled)\n`;
-            }
-            text += `\n`;
-        });
-
-        if (navigator.clipboard) {
-            navigator.clipboard.writeText(text).then(() => {
-                alert('Itinerary text copied to clipboard!');
-            }).catch(() => {
-                prompt('Copy your itinerary below:', text);
-            });
-        } else {
-            prompt('Copy your itinerary below:', text);
-        }
-    }
 
     // Initialize on page load
     document.addEventListener('DOMContentLoaded', initItinerary);
