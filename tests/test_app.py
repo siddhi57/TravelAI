@@ -57,15 +57,15 @@ def test_ml_recommender():
     assert len(results) > 0
     assert 'name' in results[0]
 
-    # Test budget range matching
-    results_range = recommender.recommend(
-        budget_level='6,000 - 15,000',
+    # Test budget tier matching with 3 defined categories
+    results_budget = recommender.recommend(
+        budget_level='Budget',
         category='Beach',
         interests=['beach'],
         top_n=5
     )
-    assert len(results_range) > 0
-    assert 'name' in results_range[0]
+    assert len(results_budget) > 0
+    assert 'name' in results_budget[0]
 
 def test_weather_api_wrapper():
     """Test OpenWeatherMap wrapper fallback & structure."""
@@ -411,11 +411,11 @@ def test_itinerary_generation_and_editable_interface(client):
     assert res.status_code == 200
     assert b'AI Day-by-Day Itinerary Generator' in res.data
     
-    # POST to generate a 3-day itinerary with custom budget range
+    # POST to generate a 3-day itinerary with defined budget category
     res = client.post('/itinerary', data={
         'destination': 'Jaipur',
         'days': 3,
-        'budget': '6,000 - 15,000'
+        'budget': 'Moderate'
     }, follow_redirects=True)
     assert res.status_code == 200
     assert b'3-Day Plan for Jaipur' in res.data

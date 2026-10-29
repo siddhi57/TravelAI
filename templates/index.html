@@ -121,11 +121,11 @@
                     <div class="d-flex justify-content-between align-items-start mb-2">
                         <span class="badge-category">{{ dest.category }}</span>
                         {% if dest.budget_level == 'Budget' %}
-                            <span class="badge-budget">Budget (&lt; ₹5,000/day)</span>
+                            <span class="badge-budget">Budget (Under ₹15,000)</span>
                         {% elif dest.budget_level == 'Moderate' %}
-                            <span class="badge-budget">Moderate (₹5,000 - ₹15,000/day)</span>
+                            <span class="badge-budget">Moderate (₹15,000 - ₹50,000)</span>
                         {% elif dest.budget_level == 'Luxury' %}
-                            <span class="badge-budget">Luxury (₹15,000+/day)</span>
+                            <span class="badge-budget">Luxury (Above ₹50,000)</span>
                         {% else %}
                             <span class="badge-budget">{{ dest.budget_level }}</span>
                         {% endif %}

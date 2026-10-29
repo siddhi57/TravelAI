@@ -7,8 +7,10 @@ from sklearn.metrics.pairwise import cosine_similarity
 
 def map_budget_to_tiers(budget_input):
     """
-    Maps user-facing budget ranges, numeric values, or tier names to matching dataset tiers ('Budget', 'Moderate', 'Luxury').
-    Returns a list of matching lower-case tier strings, or None if matching all.
+    Maps user-facing budget categories to dataset tiers ('Budget', 'Moderate', 'Luxury'):
+    - Budget: under 15000
+    - Moderate: 15000-50000
+    - Luxury: above 50000
     """
     if not budget_input:
         return None
@@ -16,15 +18,15 @@ def map_budget_to_tiers(budget_input):
     if b in ('any', 'all', '', 'none'):
         return None
     
-    # Direct legacy matches
-    if b == 'budget':
+    # Direct keyword matches
+    if 'budget' in b:
         return ['budget']
-    if b == 'moderate':
+    if 'moderate' in b:
         return ['moderate']
-    if b == 'luxury':
+    if 'luxury' in b:
         return ['luxury']
         
-    # Extract numbers from range string (e.g. '2,500 - 6,000' -> [2500, 6000])
+    # Extract numbers if passed as numeric range
     raw_nums = re.findall(r'\d[\d,]*', b)
     numbers = []
     for n in raw_nums:
@@ -35,28 +37,12 @@ def map_budget_to_tiers(budget_input):
     if numbers:
         min_n = min(numbers)
         max_n = max(numbers)
-        if max_n < 3500 or ('under' in b and min_n <= 3500):
+        if max_n <= 15000 or 'under' in b:
             return ['budget']
-        elif min_n < 5000 and max_n <= 8000:
-            return ['budget', 'moderate']
-        elif min_n >= 5000 and max_n <= 15000:
-            return ['moderate']
-        elif min_n >= 10000 and max_n > 15000 and min_n <= 20000:
-            return ['moderate', 'luxury']
-        elif min_n > 20000 or 'above' in b:
+        elif min_n >= 50000 or 'above' in b:
             return ['luxury']
-            
-    # Textual tier keywords
-    if 'under' in b or 'backpacker' in b or 'low' in b:
-        return ['budget']
-    if 'economy' in b or 'affordable' in b:
-        return ['budget', 'moderate']
-    if 'mid' in b or 'standard' in b or 'moderate' in b:
-        return ['moderate']
-    if 'premium' in b or 'upscale' in b:
-        return ['moderate', 'luxury']
-    if 'above' in b or 'luxury' in b or 'elite' in b:
-        return ['luxury']
+        else:
+            return ['moderate']
 
     return [b]
 

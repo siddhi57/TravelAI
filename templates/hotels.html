@@ -16,15 +16,10 @@
                     <form method="GET" action="{{ url_for('hotels') }}" class="d-flex gap-2">
                         <input type="text" name="destination" class="form-control" value="{{ destination }}" placeholder="Enter destination..." required>
                         <select name="budget" class="form-select" style="min-width: 220px;" onchange="this.form.submit()">
-                            <option value="Any" {% if budget_filter == 'Any' %}selected{% endif %}>All Budget Ranges</option>
-                            <option value="Under 2,500" {% if budget_filter == 'Under 2,500' %}selected{% endif %}>Under ₹2,500 / day (Economy)</option>
-                            <option value="2,500 - 6,000" {% if budget_filter == '2,500 - 6,000' %}selected{% endif %}>₹2,500 - ₹6,000 / day (Standard)</option>
-                            <option value="6,000 - 15,000" {% if budget_filter == '6,000 - 15,000' %}selected{% endif %}>₹6,000 - ₹15,000 / day (Moderate)</option>
-                            <option value="15,000 - 30,000" {% if budget_filter == '15,000 - 30,000' %}selected{% endif %}>₹15,000 - ₹30,000 / day (Premium)</option>
-                            <option value="Above 30,000" {% if budget_filter == 'Above 30,000' %}selected{% endif %}>Above ₹30,000 / day (Luxury)</option>
-                            <option value="Budget" {% if budget_filter == 'Budget' %}selected{% endif %}>Budget</option>
-                            <option value="Moderate" {% if budget_filter == 'Moderate' %}selected{% endif %}>Moderate</option>
-                            <option value="Luxury" {% if budget_filter == 'Luxury' %}selected{% endif %}>Luxury</option>
+                            <option value="Any" {% if budget_filter == 'Any' %}selected{% endif %}>All Budgets</option>
+                            <option value="Budget" {% if budget_filter == 'Budget' %}selected{% endif %}>Budget (Under ₹15,000)</option>
+                            <option value="Moderate" {% if budget_filter == 'Moderate' %}selected{% endif %}>Moderate (₹15,000 - ₹50,000)</option>
+                            <option value="Luxury" {% if budget_filter == 'Luxury' %}selected{% endif %}>Luxury (Above ₹50,000)</option>
                         </select>
                         <button type="submit" class="btn btn-success px-4 fw-bold">Search</button>
                     </form>
