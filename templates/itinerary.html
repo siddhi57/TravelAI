@@ -2,12 +2,63 @@
 
 {% block title %}AI Itinerary Generator — TravelAI Companion{% endblock %}
 
+{% block extra_css %}
+<style>
+.activity-card {
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+.activity-card:hover {
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08) !important;
+}
+.badge-category {
+    background-color: #e9ecef;
+    color: #495057;
+    font-size: 0.75rem;
+    font-weight: 600;
+    padding: 0.35em 0.65em;
+    border-radius: 0.375rem;
+}
+.timeline-day {
+    position: relative;
+    padding-left: 1.25rem;
+    border-left: 3px solid #dee2e6;
+}
+.timeline-day::before {
+    content: '';
+    position: absolute;
+    left: -7px;
+    top: 4px;
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background-color: #0d6efd;
+    border: 2px solid #fff;
+}
+@media print {
+    .navbar, footer, .sticky-lg-top, .btn, .alert, .chatbot-wrapper, #chatbotContainer, .btn-group, .modal {
+        display: none !important;
+    }
+    .col-lg-8 {
+        width: 100% !important;
+    }
+    .card {
+        box-shadow: none !important;
+        border: 1px solid #dee2e6 !important;
+        page-break-inside: avoid;
+    }
+    body {
+        background-color: #fff !important;
+    }
+}
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="container py-4">
     <div class="row align-items-center mb-4">
         <div class="col-md-8">
             <h2 class="fw-bold mb-1"><i class="bi bi-calendar-range text-primary me-2"></i>AI Day-by-Day Itinerary Generator</h2>
-            <p class="text-muted">Generates structured daily activity plans sorted by spatial geodesic proximity (Haversine distance)</p>
+            <p class="text-muted">Generate and customize your daily travel schedule with proximity routing and full activity editing</p>
         </div>
     </div>
 
@@ -44,18 +95,47 @@
             </div>
         </div>
 
-        <!-- Generated Itinerary Schedule -->
+        <!-- Generated & Editable Itinerary Schedule -->
         <div class="col-lg-8">
             {% if days_plan %}
-                <div class="card shadow-sm p-4 mb-4 bg-primary bg-opacity-10 border-primary">
-                    <div class="d-flex justify-content-between align-items-center">
+                <!-- Itinerary Header Summary -->
+                <div class="card shadow-sm p-4 mb-3 bg-primary bg-opacity-10 border-primary">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center gap-3">
                         <div>
-                            <h4 class="fw-bold mb-1 text-primary">{{ days_plan|length }}-Day Plan for {{ destination }}</h4>
-                            <p class="small text-muted mb-0"><i class="bi bi-geo me-1"></i>Sorted using Haversine geodesic distance from center.</p>
+                            <div class="d-flex align-items-center gap-2 mb-1">
+                                <h4 class="fw-bold mb-0 text-primary" id="itineraryHeaderTitle">{{ days_plan|length }}-Day Plan for {{ destination }}</h4>
+                                <span id="customizedBadge" class="badge bg-success bg-opacity-10 text-success border border-success d-none">
+                                    <i class="bi bi-pencil-fill me-1"></i>Customized
+                                </span>
+                            </div>
+                            <p class="small text-muted mb-0"><i class="bi bi-geo me-1"></i>Sorted using Haversine geodesic proximity from center. Fully editable below.</p>
                         </div>
-                        <a href="{{ url_for('hotels', destination=destination) }}" class="btn btn-sm btn-success">
-                            <i class="bi bi-building me-1"></i>Book Hotels
-                        </a>
+                        <div class="d-flex flex-wrap gap-2">
+                            <button type="button" class="btn btn-sm btn-outline-secondary" onclick="window.print()" title="Print or save as PDF">
+                                <i class="bi bi-printer me-1"></i>Print / PDF
+                            </button>
+                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="exportItineraryText()" title="Copy formatted itinerary to clipboard">
+                                <i class="bi bi-clipboard-check me-1"></i>Export Text
+                            </button>
+                            <a href="{{ url_for('hotels', destination=destination) }}" class="btn btn-sm btn-success">
+                                <i class="bi bi-building me-1"></i>Book Hotels
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Toolbar for Itinerary Customization -->
+                <div class="d-flex flex-wrap justify-content-between align-items-center bg-white p-3 rounded shadow-sm border mb-4 gap-2">
+                    <div class="d-flex align-items-center gap-2">
+                        <span class="text-muted small fw-semibold"><i class="bi bi-gear-fill me-1 text-primary"></i>Customization Tools:</span>
+                        <button type="button" class="btn btn-sm btn-outline-primary" onclick="addNewDay()">
+                            <i class="bi bi-calendar-plus me-1"></i>Add Day
+                        </button>
+                    </div>
+                    <div>
+                        <button type="button" id="resetPlanBtn" class="btn btn-sm btn-outline-danger d-none" onclick="resetToOriginalPlan()">
+                            <i class="bi bi-arrow-counterclockwise me-1"></i>Reset to AI Plan
+                        </button>
                     </div>
                 </div>
 
@@ -66,44 +146,509 @@
                     </div>
                 {% endif %}
 
-                <div class="mt-4">
-                    {% for day in days_plan %}
-                        <div class="timeline-day">
-                            <h4 class="fw-bold text-dark mb-3">Day {{ day.day_number }} Schedule</h4>
-                            
-                            <div class="row g-3">
-                                {% for act in day.activities %}
-                                    <div class="col-12">
-                                        <div class="card shadow-sm p-3 border-start border-3 {% if act.is_simulated %}border-secondary bg-light{% else %}border-primary{% endif %}">
-                                            <div class="card-body p-2">
-                                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                                    <span class="badge bg-primary text-white fw-semibold">{{ act.slot }}</span>
-                                                    {% if act.is_simulated %}
-                                                        <span class="badge bg-secondary">Suggested Activity</span>
-                                                    {% elif act.category %}
-                                                        <span class="badge-category">{{ act.category }}</span>
-                                                    {% endif %}
-                                                </div>
-                                                <h5 class="fw-bold mb-1 text-dark">{{ act.title }}</h5>
-                                                <p class="text-muted small mb-0"><i class="bi bi-geo-alt me-1"></i>{{ act.address }}</p>
-                                            </div>
-                                        </div>
-                                    </div>
-                                {% endfor %}
-                            </div>
-                        </div>
-                    {% endfor %}
+                <!-- Dynamic Itinerary Days Container -->
+                <div id="itineraryScheduleWrapper" class="mt-4">
+                    <!-- Populated dynamically via renderItinerary() -->
                 </div>
+
             {% else %}
                 <div class="card shadow-sm p-5 text-center">
                     <div class="card-body">
                         <i class="bi bi-map-fill text-primary opacity-50 fs-1 d-block mb-3"></i>
                         <h4 class="fw-bold">Ready to Build Your Travel Schedule?</h4>
-                        <p class="text-muted">Enter a destination and select number of days (1-7) to generate a personalized day-by-day itinerary.</p>
+                        <p class="text-muted">Enter a destination and select number of days (1-7) to generate a personalized day-by-day itinerary that you can customize and edit.</p>
                     </div>
                 </div>
             {% endif %}
         </div>
     </div>
 </div>
+
+<!-- Modal: Edit Activity -->
+<div class="modal fade" id="editActivityModal" tabindex="-1" aria-labelledby="editActivityModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow border-0">
+            <div class="modal-header bg-light border-bottom">
+                <h5 class="modal-title fw-bold" id="editActivityModalLabel"><i class="bi bi-pencil-square text-primary me-2"></i>Edit Activity</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="editActivityForm" onsubmit="event.preventDefault(); saveEditActivity();">
+                    <input type="hidden" id="editDayIndex">
+                    <input type="hidden" id="editActivityIndex">
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small text-muted">Time / Schedule Slot</label>
+                        <div class="input-group mb-2">
+                            <input type="text" id="editSlot" class="form-control" placeholder="e.g. Morning (09:00 AM) or 10:30 AM" required>
+                        </div>
+                        <div class="d-flex flex-wrap gap-1">
+                            <button type="button" class="btn btn-outline-secondary btn-xs py-0 px-2 small" onclick="setSlotValue('editSlot', 'Morning (09:00 AM)')">Morning</button>
+                            <button type="button" class="btn btn-outline-secondary btn-xs py-0 px-2 small" onclick="setSlotValue('editSlot', 'Afternoon (01:30 PM)')">Afternoon</button>
+                            <button type="button" class="btn btn-outline-secondary btn-xs py-0 px-2 small" onclick="setSlotValue('editSlot', 'Evening (05:30 PM)')">Evening</button>
+                            <button type="button" class="btn btn-outline-secondary btn-xs py-0 px-2 small" onclick="setSlotValue('editSlot', 'Night (08:30 PM)')">Night</button>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small text-muted">Activity Name / Destination</label>
+                        <input type="text" id="editTitle" class="form-control" placeholder="e.g. Amber Palace, Eiffel Tower" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small text-muted">Category</label>
+                        <select id="editCategory" class="form-select">
+                            <option value="Sightseeing">Sightseeing</option>
+                            <option value="Culture & History">Culture & History</option>
+                            <option value="Food & Dining">Food & Dining</option>
+                            <option value="Nature & Adventure">Nature & Adventure</option>
+                            <option value="Shopping">Shopping</option>
+                            <option value="Relaxation & Leisure">Relaxation & Leisure</option>
+                            <option value="Entertainment">Entertainment</option>
+                            <option value="Custom Activity">Custom Activity</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small text-muted">Address / Explorer Notes</label>
+                        <textarea id="editAddress" class="form-control" rows="2" placeholder="Address, meeting point, ticket details, or personal notes..."></textarea>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2 pt-2 border-top">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary btn-sm px-4 fw-bold">Save Changes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Modal: Add Activity -->
+<div class="modal fade" id="addActivityModal" tabindex="-1" aria-labelledby="addActivityModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content shadow border-0">
+            <div class="modal-header bg-light border-bottom">
+                <h5 class="modal-title fw-bold" id="addActivityModalLabel"><i class="bi bi-plus-circle text-success me-2"></i>Add Activity to Schedule</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body p-4">
+                <form id="addActivityForm" onsubmit="event.preventDefault(); saveNewActivity();">
+                    <input type="hidden" id="addDayIndex">
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small text-muted">Target Day</label>
+                        <input type="text" id="addDayDisplay" class="form-control bg-light" readonly>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small text-muted">Time / Schedule Slot</label>
+                        <input type="text" id="addSlot" class="form-control mb-2" placeholder="e.g. Morning (09:00 AM) or 11:00 AM" required>
+                        <div class="d-flex flex-wrap gap-1">
+                            <button type="button" class="btn btn-outline-secondary btn-xs py-0 px-2 small" onclick="setSlotValue('addSlot', 'Morning (09:00 AM)')">Morning</button>
+                            <button type="button" class="btn btn-outline-secondary btn-xs py-0 px-2 small" onclick="setSlotValue('addSlot', 'Afternoon (01:30 PM)')">Afternoon</button>
+                            <button type="button" class="btn btn-outline-secondary btn-xs py-0 px-2 small" onclick="setSlotValue('addSlot', 'Evening (05:30 PM)')">Evening</button>
+                            <button type="button" class="btn btn-outline-secondary btn-xs py-0 px-2 small" onclick="setSlotValue('addSlot', 'Night (08:30 PM)')">Night</button>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small text-muted">Activity Name / Destination</label>
+                        <input type="text" id="addTitle" class="form-control" placeholder="e.g. Traditional Dinner, Museum Tour" required>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small text-muted">Category</label>
+                        <select id="addCategory" class="form-select">
+                            <option value="Sightseeing">Sightseeing</option>
+                            <option value="Food & Dining">Food & Dining</option>
+                            <option value="Culture & History">Culture & History</option>
+                            <option value="Nature & Adventure">Nature & Adventure</option>
+                            <option value="Shopping">Shopping</option>
+                            <option value="Relaxation & Leisure">Relaxation & Leisure</option>
+                            <option value="Entertainment">Entertainment</option>
+                            <option value="Custom Activity">Custom Activity</option>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold small text-muted">Address / Explorer Notes</label>
+                        <textarea id="addAddress" class="form-control" rows="2" placeholder="Address, meeting point, ticket details, or personal notes..."></textarea>
+                    </div>
+
+                    <div class="d-flex justify-content-end gap-2 pt-2 border-top">
+                        <button type="button" class="btn btn-outline-secondary btn-sm" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-success btn-sm px-4 fw-bold">Add Activity</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% if days_plan %}
+<!-- JSON payload for initial AI plan -->
+<script id="initialItineraryData" type="application/json">
+    {{ days_plan|tojson }}
+</script>
+<script>
+    const currentDestination = {{ destination|tojson }};
+    const storageKey = 'travelai_custom_itinerary_' + encodeURIComponent(currentDestination);
+
+    let originalItineraryData = [];
+    try {
+        originalItineraryData = JSON.parse(document.getElementById('initialItineraryData').textContent);
+    } catch (e) {
+        console.error("Error parsing initial itinerary JSON", e);
+    }
+
+    let activeItinerary = [];
+
+    // Initialize itinerary from localStorage if customized, or default to original AI plan
+    function initItinerary() {
+        const saved = localStorage.getItem(storageKey);
+        if (saved) {
+            try {
+                activeItinerary = JSON.parse(saved);
+                document.getElementById('customizedBadge').classList.remove('d-none');
+                document.getElementById('resetPlanBtn').classList.remove('d-none');
+            } catch (err) {
+                console.error("Failed to load saved itinerary, falling back to original", err);
+                activeItinerary = JSON.parse(JSON.stringify(originalItineraryData));
+            }
+        } else {
+            activeItinerary = JSON.parse(JSON.stringify(originalItineraryData));
+        }
+        renderItinerary();
+    }
+
+    // Persist current state to localStorage
+    function persistState() {
+        localStorage.setItem(storageKey, JSON.stringify(activeItinerary));
+        document.getElementById('customizedBadge').classList.remove('d-none');
+        document.getElementById('resetPlanBtn').classList.remove('d-none');
+        updateHeaderTitle();
+    }
+
+    function updateHeaderTitle() {
+        const titleEl = document.getElementById('itineraryHeaderTitle');
+        if (titleEl) {
+            titleEl.textContent = `${activeItinerary.length}-Day Plan for ${currentDestination}`;
+        }
+    }
+
+    // Helper to escape HTML characters
+    function escapeHtml(str) {
+        if (!str) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+    // Render full day-by-day itinerary
+    function renderItinerary() {
+        const wrapper = document.getElementById('itineraryScheduleWrapper');
+        if (!wrapper) return;
+
+        updateHeaderTitle();
+
+        if (activeItinerary.length === 0) {
+            wrapper.innerHTML = `
+                <div class="alert alert-warning p-4 text-center">
+                    <p class="mb-2 fw-semibold">No days currently scheduled in this itinerary.</p>
+                    <button type="button" class="btn btn-sm btn-primary" onclick="addNewDay()"><i class="bi bi-plus-circle me-1"></i>Add Day 1</button>
+                    <button type="button" class="btn btn-sm btn-outline-danger ms-2" onclick="resetToOriginalPlan()">Reset to AI Plan</button>
+                </div>
+            `;
+            return;
+        }
+
+        let html = '';
+
+        activeItinerary.forEach((day, dayIdx) => {
+            html += `
+                <div class="timeline-day mb-5" data-day-index="${dayIdx}">
+                    <div class="d-flex flex-wrap justify-content-between align-items-center mb-3 gap-2">
+                        <h4 class="fw-bold text-dark mb-0">
+                            <i class="bi bi-calendar3 text-primary me-2"></i>Day ${day.day_number || (dayIdx + 1)} Schedule
+                        </h4>
+                        <div class="btn-group btn-group-sm">
+                            <button type="button" class="btn btn-outline-primary" onclick="openAddModal(${dayIdx})" title="Add an activity to Day ${day.day_number || (dayIdx + 1)}">
+                                <i class="bi bi-plus-circle me-1"></i>Add Activity
+                            </button>
+                            <button type="button" class="btn btn-outline-danger" onclick="deleteDay(${dayIdx})" title="Remove Day ${day.day_number || (dayIdx + 1)}">
+                                <i class="bi bi-trash me-1"></i>Delete Day
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="row g-3">
+            `;
+
+            if (!day.activities || day.activities.length === 0) {
+                html += `
+                    <div class="col-12">
+                        <div class="card p-3 border-dashed text-center bg-light">
+                            <p class="text-muted small mb-2">No activities planned for this day yet.</p>
+                            <button type="button" class="btn btn-sm btn-outline-primary mx-auto" onclick="openAddModal(${dayIdx})">
+                                <i class="bi bi-plus-circle me-1"></i>Add First Activity
+                            </button>
+                        </div>
+                    </div>
+                `;
+            } else {
+                day.activities.forEach((act, actIdx) => {
+                    const isFirst = actIdx === 0;
+                    const isLast = actIdx === day.activities.length - 1;
+
+                    html += `
+                        <div class="col-12 activity-card">
+                            <div class="card shadow-sm p-3 border-start border-3 ${act.is_simulated ? 'border-secondary bg-light' : 'border-primary'}">
+                                <div class="card-body p-2">
+                                    <div class="d-flex flex-wrap justify-content-between align-items-start mb-2 gap-2">
+                                        <div class="d-flex align-items-center gap-2 flex-wrap">
+                                            <span class="badge bg-primary text-white fw-semibold">${escapeHtml(act.slot || 'Scheduled')}</span>
+                                            ${act.category ? `<span class="badge-category">${escapeHtml(act.category)}</span>` : ''}
+                                            ${act.is_simulated ? `<span class="badge bg-secondary">Suggested Activity</span>` : ''}
+                                        </div>
+                                        <div class="btn-group btn-group-sm">
+                                            <button type="button" class="btn btn-outline-secondary py-0 px-2" onclick="moveActivity(${dayIdx}, ${actIdx}, -1)" ${isFirst ? 'disabled' : ''} title="Move earlier">
+                                                <i class="bi bi-arrow-up"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-outline-secondary py-0 px-2" onclick="moveActivity(${dayIdx}, ${actIdx}, 1)" ${isLast ? 'disabled' : ''} title="Move later">
+                                                <i class="bi bi-arrow-down"></i>
+                                            </button>
+                                            <button type="button" class="btn btn-outline-primary py-0 px-2 fw-semibold" onclick="openEditModal(${dayIdx}, ${actIdx})" title="Edit activity details">
+                                                <i class="bi bi-pencil-square me-1"></i>Edit
+                                            </button>
+                                            <button type="button" class="btn btn-outline-danger py-0 px-2" onclick="deleteActivity(${dayIdx}, ${actIdx})" title="Remove activity">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </div>
+                                    </div>
+                                    <h5 class="fw-bold mb-1 text-dark">${escapeHtml(act.title)}</h5>
+                                    <p class="text-muted small mb-0">
+                                        <i class="bi bi-geo-alt me-1 text-secondary"></i>${escapeHtml(act.address || 'Location notes not specified')}
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+
+            html += `
+                    </div>
+                </div>
+            `;
+        });
+
+        wrapper.innerHTML = html;
+    }
+
+    // Quick set slot helper
+    function setSlotValue(elementId, val) {
+        const input = document.getElementById(elementId);
+        if (input) {
+            input.value = val;
+        }
+    }
+
+    // Open Edit Activity Modal
+    function openEditModal(dayIdx, actIdx) {
+        const activity = activeItinerary[dayIdx].activities[actIdx];
+        if (!activity) return;
+
+        document.getElementById('editDayIndex').value = dayIdx;
+        document.getElementById('editActivityIndex').value = actIdx;
+        document.getElementById('editSlot').value = activity.slot || '';
+        document.getElementById('editTitle').value = activity.title || '';
+        document.getElementById('editCategory').value = activity.category || 'Sightseeing';
+        document.getElementById('editAddress').value = activity.address || '';
+
+        const modal = new bootstrap.Modal(document.getElementById('editActivityModal'));
+        modal.show();
+    }
+
+    // Save Edited Activity
+    function saveEditActivity() {
+        const dayIdx = parseInt(document.getElementById('editDayIndex').value, 10);
+        const actIdx = parseInt(document.getElementById('editActivityIndex').value, 10);
+
+        if (isNaN(dayIdx) || isNaN(actIdx) || !activeItinerary[dayIdx] || !activeItinerary[dayIdx].activities[actIdx]) {
+            return;
+        }
+
+        const slot = document.getElementById('editSlot').value.trim();
+        const title = document.getElementById('editTitle').value.trim();
+        const category = document.getElementById('editCategory').value;
+        const address = document.getElementById('editAddress').value.trim();
+
+        activeItinerary[dayIdx].activities[actIdx] = {
+            ...activeItinerary[dayIdx].activities[actIdx],
+            slot: slot || 'Scheduled',
+            title: title || 'Custom Activity',
+            category: category,
+            address: address || 'Custom location notes',
+            is_simulated: false
+        };
+
+        persistState();
+        renderItinerary();
+
+        const modalEl = document.getElementById('editActivityModal');
+        const modal = bootstrap.Modal.getInstance(modalEl);
+        if (modal) modal.hide();
+    }
+
+    // Open Add Activity Modal
+    function openAddModal(dayIdx) {
+        document.getElementById('addDayIndex').value = dayIdx;
+        document.getElementById('addDayDisplay').value = `Day ${activeItinerary[dayIdx].day_number || (dayIdx + 1)}`;
+        document.getElementById('addSlot').value = 'Afternoon (01:30 PM)';
+        document.getElementById('addTitle').value = '';
+        document.getElementById('addCategory').value = 'Sightseeing';
+        document.getElementById('addAddress').value = '';
+
+        const modal = new bootstrap.Modal(document.getElementById('addActivityModal'));
+        modal.show();
+    }
+
+    // Save New Activity
+    function saveNewActivity() {
+        const dayIdx = parseInt(document.getElementById('addDayIndex').value, 10);
+        if (isNaN(dayIdx) || !activeItinerary[dayIdx]) return;
+
+        const slot = document.getElementById('addSlot').value.trim() || 'Custom Slot';
+        const title = document.getElementById('addTitle').value.trim() || 'New Activity';
+        const category = document.getElementById('addCategory').value;
+        const address = document.getElementById('addAddress').value.trim() || 'Custom location notes';
+
+        if (!activeItinerary[dayIdx].activities) {
+            activeItinerary[dayIdx].activities = [];
+        }
+
+        activeItinerary[dayIdx].activities.push({
+            slot: slot,
+            title: title,
+            category: category,
+            address: address,
+            is_simulated: false
+        });
+
+        persistState();
+        renderItinerary();
+
+        const modalEl = document.getElementById('addActivityModal');
+        const modal = bootstrap.Modal.getInstance(modalEl);
+        if (modal) modal.hide();
+    }
+
+    // Delete Activity
+    function deleteActivity(dayIdx, actIdx) {
+        if (!confirm('Remove this activity from the itinerary?')) return;
+
+        if (activeItinerary[dayIdx] && activeItinerary[dayIdx].activities) {
+            activeItinerary[dayIdx].activities.splice(actIdx, 1);
+            persistState();
+            renderItinerary();
+        }
+    }
+
+    // Move Activity Up or Down
+    function moveActivity(dayIdx, actIdx, direction) {
+        const activities = activeItinerary[dayIdx].activities;
+        const targetIdx = actIdx + direction;
+
+        if (targetIdx < 0 || targetIdx >= activities.length) return;
+
+        const temp = activities[actIdx];
+        activities[actIdx] = activities[targetIdx];
+        activities[targetIdx] = temp;
+
+        persistState();
+        renderItinerary();
+    }
+
+    // Add New Day
+    function addNewDay() {
+        const newDayNumber = activeItinerary.length + 1;
+        activeItinerary.push({
+            day_number: newDayNumber,
+            activities: [
+                {
+                    slot: 'Morning (09:00 AM)',
+                    title: `${currentDestination} Exploration & Sightseeing`,
+                    category: 'Sightseeing',
+                    address: `Downtown ${currentDestination}`,
+                    is_simulated: false
+                }
+            ]
+        });
+        persistState();
+        renderItinerary();
+    }
+
+    // Delete Day
+    function deleteDay(dayIdx) {
+        const dayNum = activeItinerary[dayIdx].day_number || (dayIdx + 1);
+        if (!confirm(`Are you sure you want to delete Day ${dayNum} from your itinerary?`)) return;
+
+        activeItinerary.splice(dayIdx, 1);
+        // Renumber remaining days
+        activeItinerary.forEach((d, idx) => {
+            d.day_number = idx + 1;
+        });
+
+        persistState();
+        renderItinerary();
+    }
+
+    // Reset to Original AI Plan
+    function resetToOriginalPlan() {
+        if (!confirm('Discard all customizations and restore the original AI-generated itinerary?')) return;
+
+        localStorage.removeItem(storageKey);
+        activeItinerary = JSON.parse(JSON.stringify(originalItineraryData));
+        document.getElementById('customizedBadge').classList.add('d-none');
+        document.getElementById('resetPlanBtn').classList.add('d-none');
+        renderItinerary();
+    }
+
+    // Export formatted itinerary to clipboard
+    function exportItineraryText() {
+        let text = `=== TravelAI Companion Itinerary: ${currentDestination} ===\n`;
+        text += `Total Duration: ${activeItinerary.length} Days\n\n`;
+
+        activeItinerary.forEach((day, idx) => {
+            text += `--- Day ${day.day_number || (idx + 1)} ---\n`;
+            if (day.activities && day.activities.length > 0) {
+                day.activities.forEach(act => {
+                    text += `* [${act.slot}] ${act.title} (${act.category || 'Sightseeing'})\n`;
+                    if (act.address) text += `  Location/Notes: ${act.address}\n`;
+                });
+            } else {
+                text += `  (No activities scheduled)\n`;
+            }
+            text += `\n`;
+        });
+
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(text).then(() => {
+                alert('Itinerary text copied to clipboard!');
+            }).catch(() => {
+                prompt('Copy your itinerary below:', text);
+            });
+        } else {
+            prompt('Copy your itinerary below:', text);
+        }
+    }
+
+    // Initialize on page load
+    document.addEventListener('DOMContentLoaded', initItinerary);
+</script>
+{% endif %}
 {% endblock %}

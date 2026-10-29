@@ -394,4 +394,27 @@ def test_gemini_503_retry_and_fallback(monkeypatch):
     assert sleep_calls == [2, 4, 8]
     assert len(post_calls) == 4  # 1 initial + 3 retries
 
+def test_itinerary_generation_and_editable_interface(client):
+    """Test generating day-by-day itinerary and verify interactive editing controls."""
+    # Initial GET
+    res = client.get('/itinerary')
+    assert res.status_code == 200
+    assert b'AI Day-by-Day Itinerary Generator' in res.data
+    
+    # POST to generate a 3-day itinerary
+    res = client.post('/itinerary', data={
+        'destination': 'Jaipur',
+        'days': 3,
+        'budget': 'Moderate'
+    }, follow_redirects=True)
+    assert res.status_code == 200
+    assert b'3-Day Plan for Jaipur' in res.data
+    
+    # Verify editable interface elements and modals are rendered
+    assert b'initialItineraryData' in res.data
+    assert b'itineraryScheduleWrapper' in res.data
+    assert b'editActivityModal' in res.data
+    assert b'addActivityModal' in res.data
+    assert b'Add Day' in res.data
+    assert b'Export Text' in res.data
 
