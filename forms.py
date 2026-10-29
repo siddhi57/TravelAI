@@ -1,3 +1,4 @@
+import re
 import bleach
 from flask_wtf import FlaskForm
 from flask_wtf.file import FileField, FileAllowed
@@ -33,7 +34,7 @@ class UniqueEmailValidator:
 
 
 class PasswordComplexityValidator:
-    """Ensures password meets security criteria (at least 8 chars)."""
+    """Ensures password meets security criteria: minimum length (8 chars) and a mix of alphabets, digits, and special characters."""
     def __init__(self, min_length=8):
         self.min_length = min_length
 
@@ -41,6 +42,12 @@ class PasswordComplexityValidator:
         pwd = field.data or ""
         if len(pwd) < self.min_length:
             raise ValidationError(f"Password must be at least {self.min_length} characters long.")
+        if not re.search(r'[a-zA-Z]', pwd):
+            raise ValidationError("Password must contain at least one alphabet letter.")
+        if not re.search(r'\d', pwd):
+            raise ValidationError("Password must contain at least one digit (number).")
+        if not re.search(r'[^a-zA-Z0-9]', pwd):
+            raise ValidationError("Password must contain at least one special character (e.g. !@#%&*).")
 
 
 class RegistrationForm(FlaskForm):

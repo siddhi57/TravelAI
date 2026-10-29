@@ -62,13 +62,11 @@
                         <td><small class="text-muted">{{ u.joined_date.strftime('%b %d, %Y %H:%M') }}</small></td>
                         <td>
                             {% if u.id != current_user.id %}
-                                <form method="POST" action="{{ url_for('admin_toggle_user_role', user_id=u.id) }}" class="d-inline">
-                                    {% if u.is_admin %}
+                                {% if u.is_admin %}
+                                    <form method="POST" action="{{ url_for('admin_toggle_user_role', user_id=u.id) }}" class="d-inline">
                                         <button type="submit" class="btn btn-sm btn-outline-warning me-1">Demote to User</button>
-                                    {% else %}
-                                        <button type="submit" class="btn btn-sm btn-outline-primary me-1">Promote to Admin</button>
-                                    {% endif %}
-                                </form>
+                                    </form>
+                                {% endif %}
 
                                 <form method="POST" action="{{ url_for('admin_delete_user', user_id=u.id) }}" class="d-inline" onsubmit="return confirm('Permanently delete account for {{ u.email }}?');">
                                     <button type="submit" class="btn btn-sm btn-outline-danger">Delete</button>

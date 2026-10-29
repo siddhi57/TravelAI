@@ -101,7 +101,7 @@ def test_routes_public(client):
     assert res.status_code == 200
 
 def test_auth_workflow(client):
-    """Test user registration, login, profile, and password length checks."""
+    """Test user registration, login, profile, and password complexity checks."""
     # Register with short password should fail
     res = client.post('/register', data={
         'name': 'Test Traveler',
@@ -111,19 +111,46 @@ def test_auth_workflow(client):
     }, follow_redirects=True)
     assert b'Password must be at least 8 characters long' in res.data
 
+    # Missing alphabet letter
+    res = client.post('/register', data={
+        'name': 'Test Traveler',
+        'email': 'traveler@example.com',
+        'password': '12345678!',
+        'confirm_password': '12345678!'
+    }, follow_redirects=True)
+    assert b'Password must contain at least one alphabet letter.' in res.data
+
+    # Missing digit
+    res = client.post('/register', data={
+        'name': 'Test Traveler',
+        'email': 'traveler@example.com',
+        'password': 'TravelPass!',
+        'confirm_password': 'TravelPass!'
+    }, follow_redirects=True)
+    assert b'Password must contain at least one digit (number).' in res.data
+
+    # Missing special character
+    res = client.post('/register', data={
+        'name': 'Test Traveler',
+        'email': 'traveler@example.com',
+        'password': 'TravelPass123',
+        'confirm_password': 'TravelPass123'
+    }, follow_redirects=True)
+    assert b'Password must contain at least one special character' in res.data
+
     # Valid Registration
     res = client.post('/register', data={
         'name': 'Test Traveler',
         'email': 'traveler@example.com',
-        'password': 'password123',
-        'confirm_password': 'password123'
+        'password': 'TravelPass123!',
+        'confirm_password': 'TravelPass123!'
     }, follow_redirects=True)
     assert res.status_code == 200
     
     # Login
     res = client.post('/login', data={
         'email': 'traveler@example.com',
-        'password': 'password123'
+        'password': 'TravelPass123!'
     }, follow_redirects=True)
     assert res.status_code == 200
     
@@ -141,10 +168,10 @@ def test_admin_access_control(client):
     client.post('/register', data={
         'name': 'Regular User',
         'email': 'user@example.com',
-        'password': 'password123',
-        'confirm_password': 'password123'
+        'password': 'TravelPass123!',
+        'confirm_password': 'TravelPass123!'
     })
-    client.post('/login', data={'email': 'user@example.com', 'password': 'password123'})
+    client.post('/login', data={'email': 'user@example.com', 'password': 'TravelPass123!'})
 
     # Standard user attempting admin route
     res = client.get('/admin')
@@ -158,11 +185,16 @@ def test_admin_dashboard_and_management(client):
         
         regular_user = User(name='Member User', email='member@example.com', is_admin=False)
         regular_user.set_password('UserPass123!')
+
+        assistant_admin = User(name='Co Admin', email='coadmin@example.com', is_admin=True)
+        assistant_admin.set_password('AdminPass123!')
         
         db.session.add(admin)
         db.session.add(regular_user)
+        db.session.add(assistant_admin)
         db.session.commit()
         reg_id = regular_user.id
+        coadmin_id = assistant_admin.id
 
     # Log in as admin
     client.post('/login', data={'email': 'admin@example.com', 'password': 'AdminPass123!'})
@@ -184,10 +216,20 @@ def test_admin_dashboard_and_management(client):
     assert res.status_code == 200
     assert b'Kyoto' in res.data
 
-    # Toggle admin status of another user
+    # Verify Promote to Admin is absent in admin users view
+    res = client.get('/admin/users')
+    assert res.status_code == 200
+    assert b'Promote to Admin' not in res.data
+
+    # Attempting to promote standard user to admin should be blocked
     res = client.post(f'/admin/users/toggle_admin/{reg_id}', follow_redirects=True)
     assert res.status_code == 200
-    assert b'Admin privileges granted' in res.data
+    assert b'Promoting standard users to admin is disabled' in res.data
+
+    # Demoting an existing admin should succeed
+    res = client.post(f'/admin/users/toggle_admin/{coadmin_id}', follow_redirects=True)
+    assert res.status_code == 200
+    assert b'Admin privileges revoked' in res.data
 
 
 def test_admin_photo_moderation(client):
@@ -222,8 +264,8 @@ def test_admin_photo_moderation(client):
 def test_community_post_deletion(client):
     """Test user can delete their own post, but unauthorized user cannot."""
     # Register Author
-    client.post('/register', data={'name': 'Author User', 'email': 'author@example.com', 'password': 'password123', 'confirm_password': 'password123'})
-    client.post('/login', data={'email': 'author@example.com', 'password': 'password123'})
+    client.post('/register', data={'name': 'Author User', 'email': 'author@example.com', 'password': 'TravelPass123!', 'confirm_password': 'TravelPass123!'})
+    client.post('/login', data={'email': 'author@example.com', 'password': 'TravelPass123!'})
     
     # Create Post
     client.post('/community', data={'caption': 'Deleting soon post', 'location_name': 'Goa'}, follow_redirects=True)
@@ -235,8 +277,8 @@ def test_community_post_deletion(client):
 
     # Register Stranger User
     client.get('/logout')
-    client.post('/register', data={'name': 'Stranger User', 'email': 'stranger@example.com', 'password': 'password123', 'confirm_password': 'password123'})
-    client.post('/login', data={'email': 'stranger@example.com', 'password': 'password123'})
+    client.post('/register', data={'name': 'Stranger User', 'email': 'stranger@example.com', 'password': 'TravelPass123!', 'confirm_password': 'TravelPass123!'})
+    client.post('/login', data={'email': 'stranger@example.com', 'password': 'TravelPass123!'})
 
     # Stranger tries to delete Author's post -> should receive 403 Forbidden
     res = client.post(f'/community/delete/{post_id}')
@@ -244,7 +286,7 @@ def test_community_post_deletion(client):
 
     # Log in back as Author and delete post -> should succeed
     client.get('/logout')
-    client.post('/login', data={'email': 'author@example.com', 'password': 'password123'})
+    client.post('/login', data={'email': 'author@example.com', 'password': 'TravelPass123!'})
     res = client.post(f'/community/delete/{post_id}', follow_redirects=True)
     assert res.status_code == 200
     assert b'Post deleted successfully' in res.data

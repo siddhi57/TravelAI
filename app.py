@@ -602,10 +602,13 @@ def admin_toggle_user_role(user_id):
         flash("You cannot revoke your own administrator privileges.", "warning")
         return redirect(url_for('admin_users'))
         
-    user.is_admin = not user.is_admin
+    if not user.is_admin:
+        flash("Promoting standard users to admin is disabled. Only the system superadmin account is permitted.", "warning")
+        return redirect(url_for('admin_users'))
+
+    user.is_admin = False
     db.session.commit()
-    status_str = "granted" if user.is_admin else "revoked"
-    flash(f"Admin privileges {status_str} for user '{user.email}'.", "success")
+    flash(f"Admin privileges revoked for user '{user.email}'.", "success")
     return redirect(url_for('admin_users'))
 
 
