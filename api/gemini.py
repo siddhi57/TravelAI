@@ -299,6 +299,31 @@ def _extract_requested_days(message):
     return 3
 
 
+_ALL_DESTINATIONS = None
+
+def _get_known_destinations():
+    global _ALL_DESTINATIONS
+    if _ALL_DESTINATIONS is not None:
+        return _ALL_DESTINATIONS
+    
+    dest_set = set(KNOWN_DESTINATIONS)
+    try:
+        csv_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), 'datasets', 'destinations.csv')
+        if os.path.exists(csv_path):
+            import pandas as pd
+            df = pd.read_csv(csv_path)
+            for name in df['name'].dropna():
+                clean_name = name.split('(')[0].strip()
+                if clean_name:
+                    dest_set.add(clean_name)
+                dest_set.add(name.strip())
+    except Exception:
+        pass
+    
+    _ALL_DESTINATIONS = sorted(list(dest_set), key=lambda x: -len(x))
+    return _ALL_DESTINATIONS
+
+
 def _extract_destination(message):
     """
     Detects the destination name from the user's message.
@@ -306,7 +331,7 @@ def _extract_destination(message):
     m_lower = message.lower()
     
     # 1. Match known destinations from dataset
-    for dest in KNOWN_DESTINATIONS:
+    for dest in _get_known_destinations():
         pattern = r'\b' + re.escape(dest.lower()) + r'\b'
         if re.search(pattern, m_lower):
             return dest
