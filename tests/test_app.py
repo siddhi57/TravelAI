@@ -81,6 +81,8 @@ def test_routes_public(client):
     """Test public route accessibility."""
     res = client.get('/')
     assert res.status_code == 200
+    assert b'chatbotContainer' in res.data
+    assert b'chatbot.js' in res.data
     
     res = client.get('/recommendations')
     assert res.status_code == 200
@@ -199,10 +201,12 @@ def test_admin_dashboard_and_management(client):
     # Log in as admin
     client.post('/login', data={'email': 'admin@example.com', 'password': 'AdminPass123!'})
 
-    # Access Admin Dashboard
+    # Access Admin Dashboard (Chatbot popup should be omitted)
     res = client.get('/admin')
     assert res.status_code == 200
     assert b'Administrator Control Panel' in res.data
+    assert b'chatbotContainer' not in res.data
+    assert b'chatbot.js' not in res.data
 
     # Manage Destinations (Add new destination)
     res = client.post('/admin/destinations', data={
@@ -216,10 +220,12 @@ def test_admin_dashboard_and_management(client):
     assert res.status_code == 200
     assert b'Kyoto' in res.data
 
-    # Verify Promote to Admin is absent in admin users view
+    # Verify Promote to Admin is absent and chatbot is omitted in admin users view
     res = client.get('/admin/users')
     assert res.status_code == 200
     assert b'Promote to Admin' not in res.data
+    assert b'chatbotContainer' not in res.data
+    assert b'chatbot.js' not in res.data
 
     # Attempting to promote standard user to admin should be blocked
     res = client.post(f'/admin/users/toggle_admin/{reg_id}', follow_redirects=True)

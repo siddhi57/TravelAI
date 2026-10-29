@@ -166,9 +166,13 @@
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     <!-- Custom JS -->
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
-    <!-- AI Travel Chatbot Widget & Script -->
-    {% include 'components/chatbot.html' %}
-    <script src="{{ url_for('static', filename='js/chatbot.js') }}"></script>
+    <!-- AI Travel Chatbot Widget & Script (disabled on admin panel pages) -->
+    {% block chatbot %}
+        {% if not (request.path and request.path.startswith('/admin')) %}
+            {% include 'components/chatbot.html' %}
+            <script src="{{ url_for('static', filename='js/chatbot.js') }}"></script>
+        {% endif %}
+    {% endblock %}
     {% block extra_js %}{% endblock %}
 </body>
 </html>
