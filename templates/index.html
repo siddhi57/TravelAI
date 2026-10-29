@@ -70,9 +70,9 @@
                     <div class="d-inline-flex align-items-center justify-content-center bg-info bg-opacity-10 text-info p-3 rounded-3 mb-3">
                         <i class="bi bi-map fs-2"></i>
                     </div>
-                    <h5 class="card-title fw-bold">OpenStreetMap Attractions</h5>
+                    <h5 class="card-title fw-bold">Tourist Attractions</h5>
                     <p class="card-text text-muted">Interactive Leaflet.js map with custom pin markers for nearby tourist attractions, sights, and historical landmarks.</p>
-                    <a href="{{ url_for('attractions_map') }}" class="btn btn-sm btn-outline-info">Explore Map &rarr;</a>
+                    <a href="{{ url_for('attractions_map') }}" class="btn btn-sm btn-outline-info">Explore Tourist Attractions &rarr;</a>
                 </div>
             </div>
         </div>
@@ -132,8 +132,8 @@
                         <a href="{{ url_for('hotels', destination=dest.name) }}" class="btn btn-sm btn-light flex-fill" title="Hotels">
                             <i class="bi bi-building text-success"></i> Hotels
                         </a>
-                        <a href="{{ url_for('attractions_map', destination=dest.name) }}" class="btn btn-sm btn-light flex-fill" title="Map">
-                            <i class="bi bi-map text-info"></i> Map
+                        <a href="{{ url_for('attractions_map', destination=dest.name) }}" class="btn btn-sm btn-light flex-fill" title="Tourist Attraction">
+                            <i class="bi bi-geo-alt text-info"></i> Tourist Attraction
                         </a>
                     </div>
                 </div>

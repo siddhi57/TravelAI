@@ -95,6 +95,11 @@ def test_routes_public(client):
     
     res = client.get('/attractions?destination=Goa')
     assert res.status_code == 200
+    assert b'Tourist Attraction' in res.data
+    
+    res = client.get('/tourist-attractions?destination=Goa')
+    assert res.status_code == 200
+    assert b'Tourist Attraction' in res.data
     
     res = client.get('/itinerary')
     assert res.status_code == 200

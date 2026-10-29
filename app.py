@@ -291,6 +291,7 @@ def weather():
 
 
 @app.route('/attractions')
+@app.route('/tourist-attractions')
 def attractions_map():
     destination_name = request.args.get('destination', 'Jaipur').strip()
     
@@ -301,6 +302,8 @@ def attractions_map():
                            destination=destination_name, 
                            coords=coords, 
                            attractions=attraction_list)
+
+app.add_url_rule('/tourist-attractions', endpoint='tourist_attraction', view_func=attractions_map)
 
 
 @app.route('/itinerary', methods=['GET', 'POST'])

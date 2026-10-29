@@ -10,7 +10,7 @@
 2. **TF-IDF Machine Learning Recommender Engine**: Utilizes classical Information Retrieval (IR) and Machine Learning techniques — `scikit-learn` `TfidfVectorizer` and `cosine_similarity` — to match user budget, travel category, interests, and preferred regions across 85+ destinations (`ml/recommender.py`).
 3. **Hotel Finder (Geoapify Places API)**: Nearby accommodation search with budget filtering, rating sorting, map pins, and non-nullable SQLite response caching (`HotelsCache`).
 4. **Live Weather Dashboard (OpenWeatherMap API)**: Real-time temperature, humidity, wind metrics, and 5-day weather forecasts.
-5. **Nearby Attractions Finder (Geoapify + OpenStreetMap)**: Interactive Leaflet.js map with tourist attraction pins and distance listings.
+5. **Tourist Attraction Finder (Geoapify + OpenStreetMap)**: Interactive Leaflet.js map with tourist attraction pins and distance listings.
 6. **Day-by-Day Itinerary Generator**: Multi-day itinerary planning with geodesic Haversine distance proximity sorting.
 7. **Community Social Feed**: Post captions, photo uploads, Geoapify geocoded location tags, pagination, AJAX likes, and flat comments.
 
