@@ -1,16 +1,23 @@
+# Core Web Framework & Extensions
 Flask==3.1.0
 Flask-SQLAlchemy==3.1.1
 Flask-Login==0.6.3
 Flask-WTF==1.2.2
 WTForms==3.2.1
 Werkzeug==3.1.3
+email-validator==2.3.0
+bleach==6.2.0
+python-dotenv==1.0.1
+
+# Machine Learning & Data Processing
 pandas==2.2.3
 numpy==2.2.3
 scikit-learn==1.6.1
-python-dotenv==1.0.1
+
+# Generative AI & External APIs
+google-genai==2.28.0
 requests==2.32.3
-bleach==6.2.0
-email-validator==2.3.0
+
+# Production WSGI Server & Testing
 gunicorn==23.0.0
 pytest==8.3.4
-google-genai>=2.25.0
