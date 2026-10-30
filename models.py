@@ -66,6 +66,7 @@ class HotelsCache(db.Model):
     address = db.Column(db.String(255), nullable=True)
     rating = db.Column(db.Float, nullable=True)
     price_tier = db.Column(db.String(50), nullable=True)
+    price_per_night = db.Column(db.Integer, nullable=True)
     lat = db.Column(db.Float, nullable=True)
     lng = db.Column(db.Float, nullable=True)
     website = db.Column(db.String(255), nullable=True)
@@ -76,13 +77,28 @@ class HotelsCache(db.Model):
         if not web:
             dest_name = self.destination.name if self.destination else ""
             web = f"https://www.google.com/search?q={self.hotel_name.replace(' ', '+')}+{dest_name.replace(' ', '+')}+hotel+website"
+
+        tier = (self.price_tier or 'Moderate').strip().title()
+        if tier not in ('Budget', 'Moderate', 'Luxury'):
+            tier = 'Moderate'
+
+        price = self.price_per_night
+        if not price or price <= 0:
+            if tier == 'Budget':
+                price = 2200
+            elif tier == 'Luxury':
+                price = 24000
+            else:
+                price = 6500
+
         return {
             'id': self.id,
             'destination_id': self.destination_id,
             'hotel_name': self.hotel_name,
             'address': self.address,
             'rating': self.rating,
-            'price_tier': self.price_tier,
+            'price_tier': tier,
+            'price_per_night': price,
             'lat': self.lat,
             'lng': self.lng,
             'website': web,

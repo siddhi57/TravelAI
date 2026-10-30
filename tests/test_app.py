@@ -432,3 +432,64 @@ def test_itinerary_generation_and_editable_interface(client):
     assert b'Export Text' not in res.data
     assert b'Print / PDF' not in res.data
 
+
+
+def test_chatbot_personalized_travel_queries():
+    """Verify that chatbot accurately answers diverse non-itinerary travel queries in a personalized manner."""
+    # 1. Food query
+    reply_food = ask_travel_gemini("What are the best street foods to try in Jaipur?", user_name="Siddharth")
+    assert "* **Day 1:" not in reply_food
+    assert "Pyaaz Kachori" in reply_food or "LMB" in reply_food
+    assert "Siddharth" in reply_food
+    assert "$" not in reply_food
+
+    # 2. Transportation query
+    reply_trans = ask_travel_gemini("How to travel from Delhi to Manali?")
+    assert "* **Day 1:" not in reply_trans
+    assert "Volvo" in reply_trans
+    assert "$" not in reply_trans
+
+    # 3. Safety query
+    reply_safety = ask_travel_gemini("Is Himachal safe for solo female travelers?", user_name="Siddharth")
+    assert "* **Day 1:" not in reply_safety
+    assert "112" in reply_safety or "1091" in reply_safety
+    assert "Siddharth" in reply_safety
+
+    # 4. Budget query
+    reply_budget = ask_travel_gemini("How to plan a trip to Goa under 15000 with budget hacks?")
+    assert "* **Day 1:" not in reply_budget
+    assert "15,000" in reply_budget
+    assert "$" not in reply_budget
+
+    # 5. Offbeat hidden gems query
+    reply_offbeat = ask_travel_gemini("Suggest offbeat hidden places in South India")
+    assert "* **Day 1:" not in reply_offbeat
+    assert "Gandikota" in reply_offbeat or "Dhanushkodi" in reply_offbeat or "Varkala" in reply_offbeat
+
+    # 6. Culture & temple etiquette
+    reply_culture = ask_travel_gemini("What is temple etiquette and dress code in India?")
+    assert "* **Day 1:" not in reply_culture
+    assert "Temple" in reply_culture
+    assert "Footwear" in reply_culture or "Shoes" in reply_culture
+
+
+def test_api_chat_endpoint_with_context_and_auth(client):
+    """Test /api/chat endpoint with authenticated user and page context."""
+    # Login user
+    client.post('/login', data={
+        'email': 'traveler@example.com',
+        'password': 'Password123!'
+    }, follow_redirects=True)
+
+    # Ask a contextual question about food while browsing Jaipur
+    res = client.post('/api/chat', json={
+        'message': 'What dishes should I eat here?',
+        'history': [],
+        'context': {'destination': 'Jaipur', 'url': '/hotels?destination=Jaipur'}
+    })
+    assert res.status_code == 200
+    data = res.get_json()
+    assert data['success'] is True
+    reply = data['reply']
+    assert "Jaipur" in reply
+    assert "$" not in reply

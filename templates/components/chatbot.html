@@ -43,16 +43,18 @@
                     </div>
                 </div>
                 <div class="chat-msg-bubble shadow-sm p-3 rounded-3">
-                    <p class="mb-2 fw-semibold text-dark">Hello! I'm your TravelAI Assistant ✈️</p>
+                    <p class="mb-2 fw-semibold text-dark">Hello{% if current_user.is_authenticated %}, {{ current_user.name.split()[0] }}{% endif %}! I'm your Personal TravelAI Companion ✈️</p>
                     <p class="mb-2 small text-secondary">
-                        Ask me anything about destination ideas, custom itineraries, packing essentials, regional attractions, or best times to travel!
+                        Ask me anything: custom day-by-day itineraries, street food & cafes, transit routes, budget hacks, solo travel safety, packing guides, or hidden gems!
                     </p>
                     <div class="chat-suggestions d-flex flex-wrap gap-1 mt-2">
-                        <button type="button" class="btn btn-xs btn-outline-info rounded-pill chat-suggestion-chip" data-prompt="Suggest a 5-day itinerary for Goa">🏝️ 5-day Goa Plan</button>
-                        <button type="button" class="btn btn-xs btn-outline-info rounded-pill chat-suggestion-chip" data-prompt="Suggest a 7-day itinerary for Paris">🗼 7-day Paris Plan</button>
-                        <button type="button" class="btn btn-xs btn-outline-info rounded-pill chat-suggestion-chip" data-prompt="What is the best time of year to visit Manali?">🏔️ Best time for Manali</button>
-                        <button type="button" class="btn btn-xs btn-outline-info rounded-pill chat-suggestion-chip" data-prompt="What are essential items to pack for an international trip?">🎒 Travel Packing Essentials</button>
-                        <button type="button" class="btn btn-xs btn-outline-info rounded-pill chat-suggestion-chip" data-prompt="Give me budget-friendly destination recommendations in India">💰 Budget Destinations</button>
+                        <button type="button" class="btn btn-xs btn-outline-info rounded-pill chat-suggestion-chip" data-prompt="What are the best street foods to try in Jaipur?">🍲 Street Foods in Jaipur</button>
+                        <button type="button" class="btn btn-xs btn-outline-info rounded-pill chat-suggestion-chip" data-prompt="How to travel from Delhi to Manali?">🚌 Delhi to Manali Route</button>
+                        <button type="button" class="btn btn-xs btn-outline-info rounded-pill chat-suggestion-chip" data-prompt="Is Himachal safe for solo female travelers?">🛡️ Solo Travel Safety</button>
+                        <button type="button" class="btn btn-xs btn-outline-info rounded-pill chat-suggestion-chip" data-prompt="How to plan a trip under ₹15,000 with budget hacks?">💰 Trip Under ₹15,000</button>
+                        <button type="button" class="btn btn-xs btn-outline-info rounded-pill chat-suggestion-chip" data-prompt="Suggest offbeat hidden places in South India">🌿 Offbeat Hidden Gems</button>
+                        <button type="button" class="btn btn-xs btn-outline-info rounded-pill chat-suggestion-chip" data-prompt="Suggest a 5-day itinerary for Goa">🏝️ 5-Day Goa Itinerary</button>
+                        <button type="button" class="btn btn-xs btn-outline-info rounded-pill chat-suggestion-chip" data-prompt="What should I pack for winter in Kashmir?">🎒 Winter Packing Checklist</button>
                     </div>
                 </div>
             </div>

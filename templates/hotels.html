@@ -8,20 +8,33 @@
     <div class="card shadow-sm mb-4">
         <div class="card-body p-4">
             <div class="row align-items-center gy-3">
-                <div class="col-md-6">
+                <div class="col-lg-5">
                     <h3 class="fw-bold mb-1"><i class="bi bi-building text-success me-2"></i>Hotels in {{ destination }}</h3>
-                    <p class="text-muted small mb-0">Powered by Geoapify Places API & SQLite Cache</p>
+                    <p class="text-muted small mb-0">Discover accommodations accurately sorted according to your budget</p>
                 </div>
-                <div class="col-md-6">
-                    <form method="GET" action="{{ url_for('hotels') }}" class="d-flex gap-2">
-                        <input type="text" name="destination" class="form-control" value="{{ destination }}" placeholder="Enter destination..." required>
-                        <select name="budget" class="form-select" style="min-width: 220px;" onchange="this.form.submit()">
-                            <option value="Any" {% if budget_filter == 'Any' %}selected{% endif %}>All Budgets</option>
-                            <option value="Budget" {% if budget_filter == 'Budget' %}selected{% endif %}>Budget (Under ₹15,000)</option>
-                            <option value="Moderate" {% if budget_filter == 'Moderate' %}selected{% endif %}>Moderate (₹15,000 - ₹50,000)</option>
-                            <option value="Luxury" {% if budget_filter == 'Luxury' %}selected{% endif %}>Luxury (Above ₹50,000)</option>
-                        </select>
-                        <button type="submit" class="btn btn-success px-4 fw-bold">Search</button>
+                <div class="col-lg-7">
+                    <form method="GET" action="{{ url_for('hotels') }}" class="row g-2 align-items-center">
+                        <div class="col-sm-4">
+                            <input type="text" name="destination" class="form-control" value="{{ destination }}" placeholder="Enter destination..." required>
+                        </div>
+                        <div class="col-sm-4">
+                            <select name="budget" class="form-select" onchange="this.form.submit()" title="Filter by budget tier">
+                                <option value="Any" {% if budget_filter == 'Any' %}selected{% endif %}>All Budgets</option>
+                                <option value="Budget" {% if budget_filter == 'Budget' %}selected{% endif %}>Budget (Under ₹15,000)</option>
+                                <option value="Moderate" {% if budget_filter == 'Moderate' %}selected{% endif %}>Moderate (₹15,000 - ₹50,000)</option>
+                                <option value="Luxury" {% if budget_filter == 'Luxury' %}selected{% endif %}>Luxury (Above ₹50,000)</option>
+                            </select>
+                        </div>
+                        <div class="col-sm-3">
+                            <select name="sort" class="form-select" onchange="this.form.submit()" title="Sort options">
+                                <option value="budget_asc" {% if sort_by == 'budget_asc' %}selected{% endif %}>Budget: Low to High</option>
+                                <option value="budget_desc" {% if sort_by == 'budget_desc' %}selected{% endif %}>Budget: High to Low</option>
+                                <option value="rating" {% if sort_by == 'rating' %}selected{% endif %}>Highest Rated</option>
+                            </select>
+                        </div>
+                        <div class="col-sm-1">
+                            <button type="submit" class="btn btn-success w-100 fw-bold" title="Search"><i class="bi bi-search"></i></button>
+                        </div>
                     </form>
                 </div>
             </div>
@@ -47,11 +60,17 @@
         <div class="col-lg-6">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h5 class="fw-bold mb-0">Accommodations Found ({{ hotels|length }})</h5>
-                <span class="badge bg-success bg-opacity-10 text-success">Sorted by Rating</span>
+                {% if sort_by == 'budget_desc' %}
+                    <span class="badge bg-success bg-opacity-10 text-success"><i class="bi bi-sort-numeric-down-alt me-1"></i>Sorted: Budget (High to Low)</span>
+                {% elif sort_by == 'rating' %}
+                    <span class="badge bg-warning bg-opacity-10 text-dark"><i class="bi bi-star-fill me-1"></i>Sorted: Highest Rated</span>
+                {% else %}
+                    <span class="badge bg-success bg-opacity-10 text-success"><i class="bi bi-sort-numeric-down me-1"></i>Sorted: Budget (Low to High)</span>
+                {% endif %}
             </div>
 
             {% if hotels %}
-                <div class="d-flex flex-column gap-3 overflow-auto" style="max-height: 500px; padding-right: 5px;">
+                <div class="d-flex flex-column gap-3 overflow-auto" style="max-height: 520px; padding-right: 5px;">
                     {% for h in hotels %}
                         <div class="card shadow-sm p-3">
                             <div class="card-body">
@@ -66,8 +85,23 @@
 
                                 <p class="text-muted small mb-2"><i class="bi bi-geo-alt me-1"></i>{{ h.address }}</p>
 
-                                <div class="d-flex justify-content-between align-items-center pt-2 border-top">
-                                    <span class="badge-budget">{{ h.price_tier if h.price_tier else 'Moderate' }}</span>
+                                <div class="d-flex justify-content-between align-items-center pt-2 border-top flex-wrap gap-2">
+                                    <div class="d-flex align-items-center gap-2 flex-wrap">
+                                        <span class="badge-budget">
+                                            {% if h.price_tier == 'Budget' %}
+                                                Budget (Under ₹15,000)
+                                            {% elif h.price_tier == 'Moderate' %}
+                                                Moderate (₹15,000 - ₹50,000)
+                                            {% elif h.price_tier == 'Luxury' %}
+                                                Luxury (Above ₹50,000)
+                                            {% else %}
+                                                {{ h.price_tier }}
+                                            {% endif %}
+                                        </span>
+                                        {% if h.price_per_night %}
+                                            <span class="fw-bold text-success small">₹{{ "{:,}".format(h.price_per_night) }} / night</span>
+                                        {% endif %}
+                                    </div>
                                     <div class="d-flex gap-2">
                                         <a href="{{ h.website if h.website else 'https://www.google.com/search?q=' + (h.hotel_name + ' ' + destination + ' hotel website')|urlencode }}" 
                                            target="_blank" 
@@ -89,7 +123,7 @@
                 <div class="alert alert-warning p-4 text-center">
                     <i class="bi bi-building-exclamation fs-1 d-block mb-2"></i>
                     <h5>No hotels found matching criteria.</h5>
-                    <p class="mb-0">Try searching for a broader destination or changing budget filter.</p>
+                    <p class="mb-0">Try selecting 'All Budgets' or broadening your search destination.</p>
                 </div>
             {% endif %}
         </div>
@@ -108,8 +142,8 @@
             {
                 lat: {{ h.lat if h.lat else coords.lat }},
                 lng: {{ h.lng if h.lng else coords.lng }},
-                title: "{{ h.hotel_name|replace('"', '\\"') }}",
-                description: "Rating: {{ h.rating if h.rating else '4.5' }} | {{ h.address|replace('"', '\\"') }}<br/><a href='{{ h.website if h.website else '#' }}' target='_blank' rel='noopener noreferrer' class='btn btn-sm btn-primary mt-1 text-white py-0 px-2'>Hotel Website</a>",
+                title: "{{ h.hotel_name|replace('"', '\"') }}",
+                description: "<strong>{{ h.hotel_name|replace('"', '\"') }}</strong><br/><span class='text-success fw-bold'>₹{{ '{:,}'.format(h.price_per_night) if h.price_per_night else '' }} / night</span> · <span class='badge bg-light text-dark border'>{{ h.price_tier }}</span><br/>Rating: {{ h.rating if h.rating else '4.5' }} ★<br/><span class='text-muted small'>{{ h.address|replace('"', '\"') }}</span><br/><a href='{{ h.website if h.website else '#' }}' target='_blank' rel='noopener noreferrer' class='btn btn-sm btn-primary mt-1 text-white py-0 px-2'>Hotel Website</a>",
                 category: "Hotel"
             }{% if not loop.last %},{% endif %}
             {% endfor %}

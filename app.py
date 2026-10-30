@@ -224,6 +224,7 @@ def recommendations():
 def hotels():
     destination_name = request.args.get('destination', 'Goa').strip()
     budget_filter = request.args.get('budget', 'Any').strip()
+    sort_by = request.args.get('sort', '').strip().lower()
     
     dest_obj = Destination.query.filter(Destination.name.ilike(destination_name)).order_by(Destination.id.asc()).first()
     dest_id = dest_obj.id if dest_obj else None
@@ -238,7 +239,8 @@ def hotels():
 
     if not cached_hotels:
         try:
-            fetched = get_nearby_hotels(destination_name, budget_tier=budget_filter, limit=10)
+            # Fetch a full spectrum across all tiers so caching covers Budget, Moderate, and Luxury
+            fetched = get_nearby_hotels(destination_name, budget_tier='Any', limit=12)
             cached_hotels = fetched
             
             if dest_id and fetched:
@@ -250,6 +252,7 @@ def hotels():
                         address=h.get('address'),
                         rating=h.get('rating'),
                         price_tier=h.get('price_tier'),
+                        price_per_night=h.get('price_per_night'),
                         lat=h.get('lat'),
                         lng=h.get('lng'),
                         website=h.get('website'),
@@ -262,7 +265,8 @@ def hotels():
             flash("Unable to fetch live hotel updates. Displaying available results.", "warning")
             cached_hotels = []
 
-    if budget_filter and budget_filter != 'Any':
+    # Filter according to selected budget tier
+    if budget_filter and budget_filter.lower() != 'any':
         target_tiers = map_budget_to_tiers(budget_filter)
         if target_tiers:
             filtered = [
@@ -271,8 +275,48 @@ def hotels():
             ]
             if filtered:
                 cached_hotels = filtered
-            
-    cached_hotels.sort(key=lambda x: x.get('rating', 0), reverse=True)
+            else:
+                fresh = get_nearby_hotels(destination_name, budget_tier=budget_filter, limit=8)
+                if fresh:
+                    cached_hotels = fresh
+
+    # Default sort accurately according to budget context
+    if not sort_by:
+        if budget_filter.lower() == 'luxury':
+            sort_by = 'budget_desc'
+        else:
+            sort_by = 'budget_asc'
+
+    # Accurate sorting according to budget and user preference
+    tier_order = {'budget': 1, 'moderate': 2, 'luxury': 3}
+    if sort_by == 'budget_desc':
+        # Luxury / High to Low: Luxury first, descending price, then rating
+        cached_hotels.sort(
+            key=lambda x: (
+                -tier_order.get(str(x.get('price_tier', '')).strip().lower(), 2),
+                -int(x.get('price_per_night', 0) or 0),
+                -float(x.get('rating', 0) or 0)
+            )
+        )
+    elif sort_by == 'rating':
+        # Highest rated first, then lowest price
+        cached_hotels.sort(
+            key=lambda x: (
+                -float(x.get('rating', 0) or 0),
+                tier_order.get(str(x.get('price_tier', '')).strip().lower(), 2),
+                int(x.get('price_per_night', 999999) or 999999)
+            )
+        )
+    else:
+        # Default: Budget (Low to High): Budget first, ascending price, then rating
+        sort_by = 'budget_asc'
+        cached_hotels.sort(
+            key=lambda x: (
+                tier_order.get(str(x.get('price_tier', '')).strip().lower(), 2),
+                int(x.get('price_per_night', 999999) or 999999),
+                -float(x.get('rating', 0) or 0)
+            )
+        )
     
     coords = geocode_location(destination_name)
     
@@ -280,7 +324,8 @@ def hotels():
                            destination=destination_name, 
                            hotels=cached_hotels, 
                            coords=coords,
-                           budget_filter=budget_filter)
+                           budget_filter=budget_filter,
+                           sort_by=sort_by)
 
 
 @app.route('/weather')
@@ -698,8 +743,11 @@ def chat():
     if len(user_message) > 2000:
         user_message = user_message[:2000]
 
+    user_name = current_user.name if current_user.is_authenticated else None
+    context = data.get('context') or {}
+
     try:
-        reply = ask_travel_gemini(user_message, history=history)
+        reply = ask_travel_gemini(user_message, history=history, user_name=user_name, context=context)
         return jsonify({'success': True, 'reply': reply})
     except Exception as e:
         app.logger.error(f"Chatbot error: {str(e)}", exc_info=True)

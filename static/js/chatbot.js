@@ -185,6 +185,14 @@ document.addEventListener('DOMContentLoaded', function () {
         sendBtn.disabled = true;
         scrollToBottom();
 
+        // Capture page context (destination and URL) for personalized guidance
+        const searchParams = new URLSearchParams(window.location.search);
+        const pageContext = {
+            url: window.location.pathname,
+            title: document.title,
+            destination: searchParams.get('destination') || ''
+        };
+
         // Send POST request to Flask backend
         fetch('/api/chat', {
             method: 'POST',
@@ -194,7 +202,8 @@ document.addEventListener('DOMContentLoaded', function () {
             },
             body: JSON.stringify({
                 message: text,
-                history: conversationHistory.slice(0, -1) // prior history without current message
+                history: conversationHistory.slice(0, -1), // prior history without current message
+                context: pageContext
             })
         })
         .then(response => {
